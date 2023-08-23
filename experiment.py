@@ -217,8 +217,10 @@ if __name__ == '__main__':
   for t in range(simRunTime):
     starttime = time.time()
     failureRates = []
+    avgNewFitness = []
     for i in range(worldWidth):
       failureRates.append([0,0])
+      avgNewFitness.append(0)
 
     #REPRODUCTION
     newRobots = []
@@ -239,18 +241,17 @@ if __name__ == '__main__':
 
     #SIMULATION
 
-
-    ## 1. Find the locations
     with mp.Pool(numCores) as p:
+      ##1. Find the locations
       newRobots = p.map(partial(findRobLocation, wA=worldArray, m=maxRobotsPerSpace), newRobots)
+      ## 2. Evaluate all robots
       newRobots = p.map(robotSim, newRobots)
     
-    ## 2. Evaluate all robots
-
     ## 3. Check for replacements
     for x in newRobots:
       loc = x.get_location()
       failureRates[loc[0]][1] += 1
+      avgNewFitness[loc[0]] += x.get_score()
       localscore = worldArray[loc[0]][loc[1]].get_score()
       if localscore < 0 or localscore < x.get_score(): # replace
         if localscore > -99:
@@ -265,6 +266,10 @@ if __name__ == '__main__':
 
 
     #update robot lists
+    for i in range(len(avgNewFitness)):
+      if failureRates[i][1] == 0:
+        continue
+      avgNewFitness[i] = avgNewFitness[i]/failureRates[i][1]
     curDead, aliveRobots = delDeadRobs(curDead, aliveRobots)
     aliveRobots.sort(key=scoreChecker, reverse = True)
 
@@ -272,18 +277,18 @@ if __name__ == '__main__':
     #create save file of world state
     if t%10 == 0:
       infoDict = {
-        "round": str(t),
-        "totalRobots": str(len(aliveRobots)),
-        "totalDeadRobots": str(len(fossilizedRobots)),
+        "round": t,
+        "totalRobots": len(aliveRobots),
+        "totalDeadRobots": len(fossilizedRobots),
         "bestScoreWorld": str(worldData(worldArray, worldHeight)),
-        "topScore": str(aliveRobots[0].get_score()),
+        "topScore": aliveRobots[0].get_score(),
         "topRobot": str(aliveRobots[0].get_structure()),
         "topGenes": str(aliveRobots[0].get_genes()),
         "topRobotLocation": str(aliveRobots[0].get_true_location()),
         "env_1_BestScorer": str(getBestScorer(worldArray, env_1_list, worldHeight)),
         "env_2_BestScorer": str(getBestScorer(worldArray, env_2_list, worldHeight)),
-        "scoreWorldData": str(worldData(worldArray, worldHeight)),
-        "failureRateWorldData": str(failureRates)
+        "failureRateWorldData": str(failureRates),
+        "avgNewFitnessLevel": str(avgNewFitness)
       }
       write_json(infoDict, "dataRound" + str(t) + ".json")
 
