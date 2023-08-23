@@ -172,7 +172,7 @@ if __name__ == '__main__':
   maxRobotsPerSpace = 1 #how many robots are allowed to occupy the same space
   mutationRate = 1 #how often offspring mutate
 
-  simRunTime = 500 #number of rounds the sim will run
+  simRunTime = 1000 #number of rounds the sim will run
   numCores = 8 #number of multiprocessing units will run
 
   worldArray = []
