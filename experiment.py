@@ -80,12 +80,12 @@ def delDeadRobs(curDead, aliveRobots):
   return curDead, aliveRobots
 
 #coverts world data into a json file
-def write_json(new_data, filename):
-  desired_dir = "./saved_data"
+def write_json(new_data, filename, folder):
+  desired_dir = "./saved_data/"+folder
   full_path = os.path.join(desired_dir, filename)
   with open(full_path, 'w') as f:
-    json_string=json.dumps(new_data)
-    f.write(json_string)
+    json.dump(new_data, f)
+  f.close()
 
 def correctCord(cords):
   tempCords = [100,100]
@@ -106,7 +106,7 @@ def getBestScorer(worldArray, columns, worldHeight):
         bestScorer = worldArray[j][i].getRobot()
   if bestScorer == None:
     return None
-  return bestScorer.get_structure(), bestScorer.get_genes()
+  return [bestScorer.get_structure().tolist(), bestScorer.get_genes().tolist()]
 
 #finds available robot nearby to mix genes with to create offspring
 def getParent(robot, worldArray, maxSpaces):
@@ -132,16 +132,14 @@ def robotSim(robot):
 
   robot.set_score(-100)
 
-  for i in range(100):
+  for i in range(300):
     #if want to change how actions are decided, do it here
     curAction = robot.choiceAction(sim.get_time(), moveMethod)
     sim.set_action('robot', curAction)
     sim.step()
     curScore = calcFitness(sim)
-    if curScore > robot.get_score():
-      robot.set_score(curScore)
-    elif robot.get_score() == None:
-      robot.set_score(curScore)  
+    if curScore > robot.get_score() or robot.get_score() == None:
+      robot.set_score(curScore) 
 
   world.remove_object('robot')
   return robot
@@ -198,13 +196,13 @@ if __name__ == '__main__':
       world = environment.World(evo, j, i)
       worldArray[i].append(world)
       worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile
-  write_json(worldFile, "_worlds.json")
+  write_json(worldFile, "_worlds.json", '')
   
   #I know I am using a preset seed here, but this actually fully randomizes it.
   #It isn't fully randomized otherwise? idk, but its currently NOT SEEDED
   random.seed(robotSeed) 
 
-  s1Robot = robot.Robot(sample_robot((5,5)), globalID)
+  s1Robot = robot.Robot(sample_robot((5,5)), globalID, None)
   s1Robot.set_location([1,1])
   s1Robot.set_true_location([1,1])
   curSim = robotSim(s1Robot)
@@ -218,16 +216,18 @@ if __name__ == '__main__':
     starttime = time.time()
     failureRates = []
     avgNewFitness = []
+    avgFitnessDiff = []
     for i in range(worldWidth):
       failureRates.append([0,0])
       avgNewFitness.append(0)
+      avgFitnessDiff.append(0)
 
     #REPRODUCTION
     newRobots = []
     for x in aliveRobots:
       #create offspring
       globalID += 1
-      newRobot = robot.Robot((x.get_structure(), x.get_connections()), globalID)
+      newRobot = robot.Robot((x.get_structure(), x.get_connections()), globalID, x.get_score())
       #determine if mutation occurs
       if random.random() < mutationRate:
         coParent = getParent(x, worldArray, maxRobotsPerSpace)
@@ -250,8 +250,9 @@ if __name__ == '__main__':
     ## 3. Check for replacements
     for x in newRobots:
       loc = x.get_location()
-      failureRates[loc[0]][1] += 1
-      avgNewFitness[loc[0]] += x.get_score()
+      avgFitnessDiff[loc[1]] += x.get_score() - x.get_par_score()
+      failureRates[loc[1]][1] += 1
+      avgNewFitness[loc[1]] += x.get_score()
       localscore = worldArray[loc[0]][loc[1]].get_score()
       if localscore < 0 or localscore < x.get_score(): # replace
         if localscore > -99:
@@ -270,28 +271,37 @@ if __name__ == '__main__':
       if failureRates[i][1] == 0:
         continue
       avgNewFitness[i] = avgNewFitness[i]/failureRates[i][1]
+      avgFitnessDiff[i] = avgFitnessDiff[i]/failureRates[i][1]
     curDead, aliveRobots = delDeadRobs(curDead, aliveRobots)
     aliveRobots.sort(key=scoreChecker, reverse = True)
 
 
     #create save file of world state
     if t%10 == 0:
+      roundfolder = 'round' + str(t)
+      if not os.path.exists('./saved_data/'+roundfolder):
+        os.mkdir('./saved_data/'+roundfolder)
       infoDict = {
         "round": t,
         "totalRobots": len(aliveRobots),
         "totalDeadRobots": len(fossilizedRobots),
-        "bestScoreWorld": str(worldData(worldArray, worldHeight)),
-        "topScore": aliveRobots[0].get_score(),
-        "topRobot": str(aliveRobots[0].get_structure()),
-        "topGenes": str(aliveRobots[0].get_genes()),
-        "topRobotLocation": str(aliveRobots[0].get_true_location()),
-        "env_1_BestScorer": str(getBestScorer(worldArray, env_1_list, worldHeight)),
-        "env_2_BestScorer": str(getBestScorer(worldArray, env_2_list, worldHeight)),
-        "failureRateWorldData": str(failureRates),
-        "avgNewFitnessLevel": str(avgNewFitness)
+        "bestScoreWorld": worldData(worldArray, worldHeight),
+        "topScore": aliveRobots[0].get_score().tolist(),
+        "topRobot": aliveRobots[0].get_structure().tolist(),
+        "topGenes": aliveRobots[0].get_genes().tolist(),
+        "topRobotLocation": aliveRobots[0].get_true_location(),
+        "env_1_BestScorer": getBestScorer(worldArray, env_1_list, worldHeight),
+        "env_2_BestScorer": getBestScorer(worldArray, env_2_list, worldHeight),
+        "failureRateWorldData": failureRates,
+        "avgNewFitness": avgNewFitness,
+        "avgFitnessDiff": avgFitnessDiff
       }
-      write_json(infoDict, "dataRound" + str(t) + ".json")
+      write_json(infoDict, "world_data_round" + str(t) + ".json", roundfolder)
 
+      robotDict = {}
+      for x in aliveRobots:
+        robotDict[str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1])] = [x.get_structure().tolist(), x.get_genes().tolist()]
+      write_json(robotDict, "robot_data_round" + str(t) + ".json", roundfolder)
 
       #print select data from each round to terminal
       print ("Round: " + str(t))
