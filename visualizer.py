@@ -9,11 +9,11 @@ from evogym import EvoSim, EvoViewer, WorldObject, get_full_connectivity
 import randomWorldGen
 
 # FIXME: Parametrize this
-filename = "./saved_data/round0/world_data_round0.json"
+filename = "./saved_data/round80/robot_data_round80.json"
 world_file = "flat_env.json" #"flat_env.json"
 worldSeed = 42
 x, y = 1, 2
-nsteps = 400
+nsteps = 300
 on_screen = True
 
 def main():
@@ -22,8 +22,8 @@ def main():
         rdata = json.loads(in_f.read())
 
     # beware horrible hack ahead, please FIX ME.
-    _rshape = rdata["topRobot"]
-    _rgenes = rdata["topGenes"]
+    _rshape = rdata["1,1"][0]
+    _rgenes = rdata["1,1"][1]
 
     shape = np.array(_rshape)
     # print(_rgenes)

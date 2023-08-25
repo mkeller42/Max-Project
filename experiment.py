@@ -132,7 +132,7 @@ def robotSim(robot):
 
   robot.set_score(-100)
 
-  for i in range(300):
+  for i in range(600):
     #if want to change how actions are decided, do it here
     curAction = robot.choiceAction(sim.get_time(), moveMethod)
     sim.set_action('robot', curAction)
@@ -170,8 +170,8 @@ if __name__ == '__main__':
   maxRobotsPerSpace = 1 #how many robots are allowed to occupy the same space
   mutationRate = 1 #how often offspring mutate
 
-  simRunTime = 1000 #number of rounds the sim will run
-  numCores = 8 #number of multiprocessing units will run
+  simRunTime = 3000 #number of rounds the sim will run
+  numCores = 12 #number of multiprocessing units will run
 
   worldArray = []
   curDead = []
@@ -205,6 +205,7 @@ if __name__ == '__main__':
   s1Robot = robot.Robot(sample_robot((5,5)), globalID, None)
   s1Robot.set_location([1,1])
   s1Robot.set_true_location([1,1])
+  s1Robot.parents = (-1, -1)
   curSim = robotSim(s1Robot)
   worldArray[1][1].setRobot(s1Robot)
 
@@ -232,6 +233,11 @@ if __name__ == '__main__':
       if random.random() < mutationRate:
         coParent = getParent(x, worldArray, maxRobotsPerSpace)
         newRobot.set_structure(newRobot.mutate(x.get_structure().copy(), x.get_genes().copy(), coParent))
+
+        if (coParent is None):
+          newRobot.parents = (x.get_id(), -1)
+        else:
+          newRobot.parents = (x.get_id(), coParent.get_id())
       else:
         newRobot.set_structure(x.get_structure().copy())
       #adds the location as its parent's location, but doesn't put into world yet
@@ -300,7 +306,11 @@ if __name__ == '__main__':
 
       robotDict = {}
       for x in aliveRobots:
-        robotDict[str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1])] = [x.get_structure().tolist(), x.get_genes().tolist()]
+        robot_location = str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1]) 
+        robotDict[robot_location] = [x.get_structure().tolist(),
+                                     x.get_genes().tolist(),
+                                     x.get_id(),
+                                     list(x.parents)]
       write_json(robotDict, "robot_data_round" + str(t) + ".json", roundfolder)
 
       #print select data from each round to terminal
