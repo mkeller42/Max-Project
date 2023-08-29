@@ -9,11 +9,25 @@ from evogym import EvoSim, EvoViewer, WorldObject, get_full_connectivity
 import randomWorldGen
 
 # FIXME: Parametrize this
-filename = "./saved_data/round80/robot_data_round80.json"
-world_file = "flat_env.json" #"flat_env.json"
-worldSeed = 42
-x, y = 1, 2
-nsteps = 300
+x, y, gen, wt = sys.argv[1:5]
+generation = int(gen)
+x = int(x)
+y = int(y)
+
+if wt == "B":
+    world_file = "hill_env.json"
+else:
+    world_file = "flat_env.json"
+
+
+
+
+filename = "./saved_data/round{}/robot_data_round{}.json".format(generation, generation)
+worldSeed = 3
+rcell = "{},{}".format(x,y)
+wx, wy = x, y
+# wx, wy = 7, 7
+nsteps = 600
 on_screen = True
 
 def main():
@@ -22,13 +36,17 @@ def main():
         rdata = json.loads(in_f.read())
 
     # beware horrible hack ahead, please FIX ME.
-    _rshape = rdata["1,1"][0]
-    _rgenes = rdata["1,1"][1]
+    _rshape = rdata[rcell][0]
+    _rgenes = rdata[rcell][1]
 
     shape = np.array(_rshape)
     # print(_rgenes)
     # print(type(_rgenes))
     genes = np.array(_rgenes)
+
+    # printing genes
+    # pgenes = [(_x*0.1)%3.141569 for _x in genes]
+    # print(pgenes)
     
     robot = WorldObject()
     robot.load_from_array(name = "robot",
@@ -36,7 +54,7 @@ def main():
 
     world, _ = randomWorldGen.randomizer(os.path.join('world_data',
                                                       world_file),
-                                         x, y, worldSeed)      
+                                         wx+1, wy+1, worldSeed)      
 
     # Run the robot
     robot.set_pos(3, 2)
@@ -45,10 +63,12 @@ def main():
     sim = EvoSim(world)
     sim.reset()
 
-    viewer = EvoViewer(sim, resolution = (400,200))
+    viewer = EvoViewer(sim, resolution = (800,400))
     viewer.track_objects('ground')
 
     frames = []
+
+    score = -100
     
     for steps in range(nsteps):
         action = []
@@ -65,6 +85,15 @@ def main():
         else:
             frames.append(viewer.render(mode="img"))
 
+
+        _score = 0
+        _size = 0
+        for i in sim.object_pos_at_time(sim.get_time(), 'robot')[0]:
+            _size += 1
+            _score += i
+        score = max((_score)/_size, score)
+
+    print(score)
     
 
 
