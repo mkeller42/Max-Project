@@ -123,25 +123,30 @@ def getParent(robot, worldArray, maxSpaces):
 
 #sims the robot in the world
 def robotSim(robot):
-  world = worldArray[robot.get_location()[0]][robot.get_location()[1]].getEvo()
-  robot.getWorldObj().set_pos(3, 2)
-  world.add_object(robot.getWorldObj())
+  worlds = worldArray[robot.get_location()[0]][robot.get_location()[1]].getEvos()
+  alt = False
 
-  sim = EvoSim(world)
-  sim.reset()
+  for world in worlds:
+    robot.getWorldObj().set_pos(3, 2)
+    world.add_object(robot.getWorldObj())
 
-  robot.set_score(-100)
+    sim = EvoSim(world)
+    sim.reset()
 
-  for i in range(300):
-    #if want to change how actions are decided, do it here
-    curAction = robot.choiceAction(sim.get_time(), moveMethod)
-    sim.set_action('robot', curAction)
-    sim.step()
-    curScore = calcFitness(sim)
-    if curScore > robot.get_score() or robot.get_score() == None:
-      robot.set_score(curScore) 
+    for i in range(100):
+      #if want to change how actions are decided, do it here
+      curAction = robot.choiceAction(sim.get_time(), moveMethod)
+      sim.set_action('robot', curAction)
+      sim.step()
+      curScore = calcFitness(sim)
+      if curScore > robot.get_score():
+        if alt == True:
+          robot.set_altscore(curScore)
+        else:
+          robot.set_score(curScore) 
 
-  world.remove_object('robot')
+    world.remove_object('robot')
+    alt = True
   return robot
 
 def findRobLocation(x, wA, m):
@@ -191,11 +196,13 @@ if __name__ == '__main__':
     for j in range(worldWidth):
       if j in env_1_list:
         evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
+        altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
       elif j in env_2_list:
         evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
-      world = environment.World(evo, j, i)
+        altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
+      world = environment.World(evo, altevo, j, i)
       worldArray[i].append(world)
-      worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile
+      worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile, altdataFile
   write_json(worldFile, "_worlds.json", '')
   
   #I know I am using a preset seed here, but this actually fully randomizes it.
@@ -232,6 +239,10 @@ if __name__ == '__main__':
       if random.random() < mutationRate:
         coParent = getParent(x, worldArray, maxRobotsPerSpace)
         newRobot.set_structure(newRobot.mutate(x.get_structure().copy(), x.get_genes().copy(), coParent))
+        if coParent == None:
+          newRobot.set_parIDs([x.get_id(), None])
+        else:
+          newRobot.set_parIDs([x.get_id(), coParent.get_id()])
       else:
         newRobot.set_structure(x.get_structure().copy())
       #adds the location as its parent's location, but doesn't put into world yet
@@ -286,7 +297,7 @@ if __name__ == '__main__':
         "totalRobots": len(aliveRobots),
         "totalDeadRobots": len(fossilizedRobots),
         "bestScoreWorld": worldData(worldArray, worldHeight),
-        "topScore": aliveRobots[0].get_score().tolist(),
+        "topScore": aliveRobots[0].get_score(),
         "topRobot": aliveRobots[0].get_structure().tolist(),
         "topGenes": aliveRobots[0].get_genes().tolist(),
         "topRobotLocation": aliveRobots[0].get_true_location(),
@@ -300,7 +311,12 @@ if __name__ == '__main__':
 
       robotDict = {}
       for x in aliveRobots:
-        robotDict[str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1])] = [x.get_structure().tolist(), x.get_genes().tolist()]
+        robotDict[str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1])] = [x.get_structure().tolist(), 
+                                                                                          x.get_genes().tolist(),
+                                                                                          x.get_id(),
+                                                                                          x.get_parIDs(),
+                                                                                          [x.get_score(),
+                                                                                          x.get_altscore()]]
       write_json(robotDict, "robot_data_round" + str(t) + ".json", roundfolder)
 
       #print select data from each round to terminal

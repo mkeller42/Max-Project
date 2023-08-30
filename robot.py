@@ -8,14 +8,22 @@ class Robot():
     self.structure, self.connections = sample
     self.location = []
     self.trueLocation = []
-    self.score = None
+    self.score = -99
     self.ID = globalID
     self.worldObject = self.createWorldObj()
     self.genes = self.generateRandomGenes(self.structure)
     self.parentFitness = parScore
+    self.parentsIDs = None
+    self.altscore = -99
 
   def get_structure(self, ):
     return self.structure
+  
+  def set_parIDs(self, ids):
+    self.parentsIDs = ids
+
+  def get_parIDs(self, ):
+    return self.parentsIDs
   
   def get_par_score(self, ):
     return self.parentFitness
@@ -51,6 +59,12 @@ class Robot():
 
   def set_score(self, s):
     self.score = s
+
+  def get_altscore(self, ):
+    return self.altscore
+
+  def set_altscore(self, s):
+    self.altscore = s
   
   def get_genes(self,):
     return self.genes
