@@ -175,8 +175,8 @@ if __name__ == '__main__':
   maxRobotsPerSpace = 1 #how many robots are allowed to occupy the same space
   mutationRate = 1 #how often offspring mutate
 
-  simRunTime = 1000 #number of rounds the sim will run
-  numCores = 8 #number of multiprocessing units will run
+  simRunTime = 3000 #number of rounds the sim will run
+  numCores = 12 #number of multiprocessing units will run
 
   worldArray = []
   curDead = []
@@ -212,6 +212,7 @@ if __name__ == '__main__':
   s1Robot = robot.Robot(sample_robot((5,5)), globalID, None)
   s1Robot.set_location([1,1])
   s1Robot.set_true_location([1,1])
+  s1Robot.parents = (-1, -1)
   curSim = robotSim(s1Robot)
   worldArray[1][1].setRobot(s1Robot)
 
