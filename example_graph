@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d0" for="node" attr.name="facecolor" attr.type="string" />
+  <graph edgedefault="undirected">
+    <node id="166062">
+      <data key="d0">R0</data>
+    </node>
+    <node id="84050">
+      <data key="d0">R0</data>
+    </node>
+    <node id="222865" />
+    <node id="61958">
+      <data key="d0">R0</data>
+    </node>
+    <node id="109531">
+      <data key="d0">R0</data>
+    </node>
+    <node id="59140">
+      <data key="d0">R0</data>
+    </node>
+    <node id="35581">
+      <data key="d0">R0</data>
+    </node>
+    <node id="31379">
+      <data key="d0">R0</data>
+    </node>
+    <node id="9955">
+      <data key="d0">R0</data>
+    </node>
+    <node id="31019">
+      <data key="d0">R0</data>
+    </node>
+    <node id="8062">
+      <data key="d0">R0</data>
+    </node>
+    <node id="8151">
+      <data key="d0">R0</data>
+    </node>
+    <node id="6322">
+      <data key="d0">R0</data>
+    </node>
+    <node id="3801">
+      <data key="d0">R0</data>
+    </node>
+    <node id="4421">
+      <data key="d0">R0</data>
+    </node>
+    <node id="2093">
+      <data key="d0">R0</data>
+    </node>
+    <node id="3571">
+      <data key="d0">R0</data>
+    </node>
+    <node id="1361">
+      <data key="d0">R0</data>
+    </node>
+    <node id="468">
+      <data key="d0">R0</data>
+    </node>
+    <edge source="166062" target="222865" />
+    <edge source="166062" target="61958" />
+    <edge source="166062" target="109531" />
+    <edge source="84050" target="222865" />
+    <edge source="61958" target="59140" />
+    <edge source="61958" target="35581" />
+    <edge source="59140" target="31379" />
+    <edge source="59140" target="9955" />
+    <edge source="31379" target="9955" />
+    <edge source="31379" target="31019" />
+    <edge source="9955" target="8062" />
+    <edge source="9955" target="8151" />
+    <edge source="8062" target="6322" />
+    <edge source="8062" target="3801" />
+    <edge source="6322" target="3801" />
+    <edge source="6322" target="4421" />
+    <edge source="3801" target="2093" />
+    <edge source="3801" target="3571" />
+    <edge source="2093" target="1361" />
+    <edge source="2093" target="468" />
+  </graph>
+</graphml>

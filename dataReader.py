@@ -1,4 +1,6 @@
 import json, sys
+import networkx as nx
+import matplotlib.pyplot as plt
 
 ##important info for this file
 # when calling in terminal, need one argument.
@@ -7,7 +9,7 @@ import json, sys
 def worldDataRead(fileNum):
   dataList = []
   for i in range(0, int(fileNum)+10, 10):
-    with open('./saved_data/round' + str(i) + '/world_data_round' + str(i) + '.json', 'r') as f:
+    with open('./example_data/round' + str(i) + '/world_data_round' + str(i) + '.json', 'r') as f:
       # print(i)
       dataList.append(json.load(f))
   return dataList
@@ -15,7 +17,7 @@ def worldDataRead(fileNum):
 def robotDataRead(fileNum):
   dataList = []
   for i in range(0, int(fileNum)+10, 10):
-    with open('./saved_data/round' + str(i) + '/robot_data_round' + str(i) + '.json', 'r') as f:
+    with open('./example_data/round' + str(i) + '/robot_data_round' + str(i) + '.json', 'r') as f:
       # print(i)
       dataList.append(json.load(f))
   return dataList
@@ -59,7 +61,7 @@ def getNewFitness(dataFile):
   return finalString
 
 def getAvgScoreDiff(dataList, fileNum):
-  finalString = "Average Score Difference from Parent by Column (up to Round " + str(fileNum) + "\n"
+  finalString = "Average Score Difference from Parent by Column (up to Round " + str(fileNum) + ")\n"
   cols = []
 
   for col in range(len(dataList[0]["avgFitnessDiff"])):
@@ -73,6 +75,39 @@ def getAvgScoreDiff(dataList, fileNum):
   
   return finalString
 
+def getAncestryGraph(dataList, robotID):
+  #return graph of ancestry
+  G = nx.Graph()
+  curGen = robotID
+  # print(curGen)
+
+  #for loop in dataList:
+  count = 2530
+  for f in reversed(dataList):
+    #find robot id in most recent dataList
+    while True:
+      for rob in f:
+        #if id == id
+        if f[rob][2] == curGen:
+          curRob = f[rob]
+          curParents = curRob[3]
+          
+          #add node + edges to graph
+          G.add_nodes_from(curParents, facecolor='R0')
+          G.add_edges_from([(curRob[2], curParents[0]), (curRob[2], curParents[1])])
+          #set robot as parents (original parent)
+          curGen = curParents[0]
+          continue
+      count -= 10
+      break
+    #find parents' ids of robot
+    
+    #repeat
+
+  nx.draw(G, with_labels=True)
+  plt.savefig("tree.png")
+  return nx.write_graphml(G, "example_graph")
+
 
 
 if __name__ == "__main__":
@@ -81,11 +116,14 @@ if __name__ == "__main__":
   worldDataList = worldDataRead(fileNum)
   robotDataList = robotDataRead(fileNum)
   
-  failRates = getFailRates(worldDataList)
-  print(failRates)
+  # failRates = getFailRates(worldDataList)
+  # print(failRates)
 
-  fitLevels = getNewFitness(worldDataList[indexNum])
-  print(fitLevels)
+  # fitLevels = getNewFitness(worldDataList[indexNum])
+  # print(fitLevels)
 
-  avgScoreDiffs = getAvgScoreDiff(worldDataList, fileNum)
-  print(avgScoreDiffs)
+  # avgScoreDiffs = getAvgScoreDiff(worldDataList, fileNum)
+  # print(avgScoreDiffs)
+
+  ancestryTree = getAncestryGraph(robotDataList, 222865)
+

@@ -50,6 +50,9 @@ def main():
 
     frames = []
     
+    # print(genes)
+    # print(shape)
+
     for steps in range(nsteps):
         action = []
         for i in range(5):
@@ -57,13 +60,16 @@ def main():
                 if shape[i][j] in [3,4]:
                     action.append(np.sin(steps/3 + (genes[i][j]*0.1)) + 1)
 
+        # print(action)
+
         sim.set_action('robot', np.array(action))
         sim.step()
 
+        
         if on_screen:
             viewer.render(mode="screen")
-        else:
-            frames.append(viewer.render(mode="img"))
+        # else:
+        #   frames.append(viewer.render(mode="img"))
 
     
 
