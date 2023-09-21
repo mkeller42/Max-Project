@@ -126,6 +126,7 @@ def robotSim(robot):
   worlds = worldArray[robot.get_location()[0]][robot.get_location()[1]].getEvos()
   alt = False
 
+
   for world in worlds:
     robot.getWorldObj().set_pos(3, 2)
     world.add_object(robot.getWorldObj())
@@ -133,17 +134,16 @@ def robotSim(robot):
     sim = EvoSim(world)
     sim.reset()
 
-    for i in range(100):
+    for i in range(300):
       #if want to change how actions are decided, do it here
       curAction = robot.choiceAction(sim.get_time(), moveMethod)
       sim.set_action('robot', curAction)
       sim.step()
       curScore = calcFitness(sim)
-      if curScore > robot.get_score():
-        if alt == True:
-          robot.set_altscore(curScore)
-        else:
-          robot.set_score(curScore) 
+      if curScore > robot.get_score() and alt==False:
+        robot.set_score(curScore) 
+      elif curScore > robot.get_altscore() and alt==True:
+        robot.set_altscore(curScore)
 
     world.remove_object('robot')
     alt = True

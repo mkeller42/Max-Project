@@ -94,8 +94,7 @@ class Robot():
       return self.randomAction()
     elif action == "oscillate":
       return self.action(steps)
-    else:
-      return ValueError
+    return ValueError
 
   def evolvedAction(self, steps):
     action = []
