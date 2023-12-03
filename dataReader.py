@@ -1,10 +1,11 @@
 import json, sys
 import networkx as nx
 import matplotlib.pyplot as plt
+import csv
 
 ##important info for this file
 # when calling in terminal, need one argument.
-#argument = round # you want to examine(will examine all rounds before as well)
+# argument = round # you want to examine(will examine all rounds before as well for some functions)
 
 def worldDataRead(fileNum):
   dataList = []
@@ -108,6 +109,44 @@ def getAncestryGraph(dataList, robotID):
   plt.savefig("tree.png")
   return nx.write_graphml(G, "example_graph")
 
+#compareScores takes the dataList defined by robotDataRead
+#returns a datafile (data.csv) that contains the average scores and avergae alt scores of robots in each group, sorted by round descending
+def compareScores(dataList):
+
+  avgsPerRound = []
+  AGroup = ['0,', '1,', '2,', '3,', '4,', '5,', '6,', '7,']
+  BGroup = ['8,', '9,', '10', '11', '12', '13', '14', '15']
+
+  for d in dataList:
+    ACount = 0
+    AStdTotal = 0
+    AAltTotal = 0
+
+    BCount = 0
+    BStdTotal = 0
+    BAltTotal = 0
+    for rob in d:
+      if (rob[0:2] in AGroup):
+        ACount += 1
+        AStdTotal += d[rob][4][0]
+        AAltTotal += d[rob][4][1]
+      elif (rob[0:2] in BGroup):
+        BCount += 1
+        BStdTotal += d[rob][4][0]
+        BAltTotal += d[rob][4][1]
+    AStdTotal = AStdTotal / ACount
+    AAltTotal = AAltTotal / ACount
+    BStdTotal = BStdTotal / ACount
+    BAltTotal = BAltTotal / ACount
+    avgsPerRound.append([AStdTotal, AAltTotal, BStdTotal, BAltTotal])
+
+  with open('data.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    filewriter.writerow(['AStd', 'AAlt', 'BStd', 'BAlt'])
+    for round in avgsPerRound:
+      filewriter.writerow([round[0], round[1], round[2], round[3]])
+
 
 
 if __name__ == "__main__":
@@ -125,5 +164,8 @@ if __name__ == "__main__":
   # avgScoreDiffs = getAvgScoreDiff(worldDataList, fileNum)
   # print(avgScoreDiffs)
 
-  ancestryTree = getAncestryGraph(robotDataList, 222865)
+  avgsPerRound = compareScores(robotDataList)  ## format = [AStandardScore, AAltScore, BStandardScore, BAltScore]
+  print(avgsPerRound)
+
+  # ancestryTree = getAncestryGraph(robotDataList, 222865)
 

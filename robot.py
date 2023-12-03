@@ -16,53 +16,69 @@ class Robot():
     self.parentsIDs = None
     self.altscore = -99
 
+  # returns robot voxel structure
   def get_structure(self, ):
     return self.structure
   
+  # sets parent IDs
   def set_parIDs(self, ids):
     self.parentsIDs = ids
 
+  # returns parent IDs
   def get_parIDs(self, ):
     return self.parentsIDs
   
+  # returns parent score
   def get_par_score(self, ):
     return self.parentFitness
   
+  # creates robot voxel structure
   def set_structure(self, structure):
     self.structure = structure
     self.set_connections(get_full_connectivity(structure))
     self.worldObject = self.createWorldObj()
   
+  # returns robot voxel connections
   def get_connections(self, ):
     return self.connections
 
+  # sets robot voxel connections
   def set_connections(self, connections):
     self.connections = connections
 
+  # returns robot ID
   def get_id(self,):
     return self.ID
 
+  # returns robot world location (y, x)
   def get_location(self, ):
     return self.location
-
+  
+  # sets robot world location (y, x)
   def set_location(self, l):
     self.location = l
 
+  # returns robot world location (x, y)
   def get_true_location(self,):
     return self.trueLocation
 
+  # sets robot world location (x, y)
   def set_true_location(self, l):
     self.trueLocation = l
 
+  # returns robot score
   def get_score(self, ):
     return self.score
 
+  # sets robot score
   def set_score(self, s):
     self.score = s
 
+  # returns robot score in alt environment
   def get_altscore(self, ):
     return self.altscore
 
+  # sets robot score in alt environment
   def set_altscore(self, s):
     self.altscore = s
   

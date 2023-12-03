@@ -7,6 +7,7 @@ from functools import partial
 import gym
 import evogym.envs
 import randomWorldGen
+import tutorials
 
 import robot
 import environment
@@ -26,7 +27,7 @@ import multiprocessing as mp
 def scoreChecker(e):
   return e.get_score()
 
-#finds open space for new offspring
+#finds open space for new offspring adjacent to worldLocation
 def findOpenSpace(worldLocation, worldArray, maxSpaces):
   possibleSpaces = []
   finalSpaces = []
@@ -38,6 +39,7 @@ def findOpenSpace(worldLocation, worldArray, maxSpaces):
       finalSpaces.append(j)
   return finalSpaces
 
+#finds occupied spaces adjacent to worldLocation
 def findOccupiedSpace(worldLocation, worldArray, maxSpaces):
   possibleSpaces = []
   finalSpaces = []
@@ -67,7 +69,7 @@ def worldData(worldArray, worldHeight):
       w[row].append(round(worldArray[row][i].get_score(), 2))
   return w
 
-#removes the outcompeted robots from the program, stores in a list
+#removes the outcompeted robots from the program, stores in list curDead
 def delDeadRobs(curDead, aliveRobots):
   for i in curDead:
     for j in range(len(aliveRobots)):
@@ -87,6 +89,7 @@ def write_json(new_data, filename, folder):
     json.dump(new_data, f)
   f.close()
 
+#converts cords (y, x format) to tempCords (x, y format)
 def correctCord(cords):
   tempCords = [100,100]
   tempCords[0] = cords[1]
@@ -134,7 +137,7 @@ def robotSim(robot):
     sim = EvoSim(world)
     sim.reset()
 
-    for i in range(300):
+    for i in range(numSteps):
       #if want to change how actions are decided, do it here
       curAction = robot.choiceAction(sim.get_time(), moveMethod)
       sim.set_action('robot', curAction)
@@ -162,6 +165,8 @@ def findRobLocation(x, wA, m):
 
 if __name__ == '__main__':
 
+  # ??
+  # print(fg())
 
   globalID = 1 #ID variable for keeping track of robots
   moveMethod = sys.argv[1]
@@ -177,6 +182,7 @@ if __name__ == '__main__':
 
   simRunTime = 3000 #number of rounds the sim will run
   numCores = 12 #number of multiprocessing units will run
+  numSteps = 300
 
   worldArray = []
   curDead = []
