@@ -7,7 +7,7 @@ from functools import partial
 import gym
 import evogym.envs
 import randomWorldGen
-import tutorials
+# import tutorials
 
 import robot
 import environment
@@ -265,6 +265,7 @@ if __name__ == '__main__':
       ## 2. Evaluate all robots
       newRobots = p.map(robotSim, newRobots)
     
+
     ## 3. Check for replacements
     for x in newRobots:
       loc = x.get_location()

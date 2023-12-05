@@ -16,6 +16,12 @@ class Robot():
     self.parentsIDs = None
     self.altscore = -99
 
+  def set_worlds(self, worlds):
+    self.worlds = worlds
+
+  def get_worlds(self, ):
+    return self.worlds
+
   # returns robot voxel structure
   def get_structure(self, ):
     return self.structure

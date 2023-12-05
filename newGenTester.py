@@ -6,9 +6,13 @@ import csv
 import imageio
 from pygifsicle import optimize
 
-from evogym import EvoSim, EvoViewer, WorldObject, get_full_connectivity, is_connected
+from evogym import EvoSim, EvoViewer, WorldObject, get_full_connectivity, is_connected, sample_robot
 import randomWorldGen
 import random
+import multiprocessing as mp
+
+import experiment
+import robot
 
 def robotDataRead(fileNum):
   dataList = []
@@ -47,6 +51,7 @@ def findNewScores(file):
   sumAScores = 0
   sumBScores = 0
   # Load the robot and the world
+  newRobots = []
 
   for y in range(16):
     for x in range(8):
@@ -69,53 +74,61 @@ def findNewScores(file):
 
       #create new offspring from A and B parent
       shape = mutate(shape, genes, shape2)
-    
-      robot = WorldObject()
-      robot.load_from_array(name = "robot",
-                          structure = shape)
+      newRobot = robot.Robot(sample_robot((5,5)), 1, -100)
+      newRobot.set_structure(shape)
+
+      #set rob worlds to parents' worlds
+      worlds = []
       for env in envos:
         
         world, _ = randomWorldGen.randomizer(os.path.join('world_data',
                                                           env),
-                                              x, y, worldSeed)      
+                                              x, y, worldSeed)  
+        worlds.append(world)
+        newRobot.set_worlds(worlds)
+      newRobots.append(newRobot)
 
-        # Run the robot
-        robot.set_pos(3, 2)
-        world.add_object(robot)
-        
-        sim = EvoSim(world)
-        sim.reset()
+  # use multiprocessing to simulate robots for round
+  with mp.Pool(4) as p:
+    ## 2. Evaluate all robots
+    newRobots = p.map(robotSim, newRobots)
 
-        score = -100
-
-        for steps in range(nsteps):
-            action = []
-            for i in range(5):
-                for j in range(5):
-                    if shape[i][j] in [3,4]:
-                        action.append(np.sin(steps/3 + (genes[i][j]*0.1)) + 1)
-
-            # print(action)
-
-            sim.set_action('robot', np.array(action))
-            sim.step()
-
-            _score = 0
-            _size = 0
-            for i in sim.object_pos_at_time(sim.get_time(), 'robot')[0]:
-                _size += 1
-                _score += i
-            score = (_score)/_size
-
-        localScores.append(score)
-      sumAScores += localScores[0]
-      sumBScores += localScores[1]
+  # collect rob scores for round
+  for rob in newRobots:
+    sumAScores += rob.get_score()
+    sumBScores += rob.get_altscore()
   avgAScore = sumAScores / count
   avgBScore = sumBScores / count
   return [avgAScore, avgBScore]
         
+#robotSim: almost-copy of robotSim in experiment.py file
+#change: uses robot.get_worlds to get the parent worlds
+def robotSim(robot):
+  alt = False
 
+  for world in robot.get_worlds():
+    robot.getWorldObj().set_pos(3, 2)
+    world.add_object(robot.getWorldObj())
 
+    sim = EvoSim(world)
+    sim.reset()
+
+    for i in range(300):
+      #if want to change how actions are decided, do it here
+      curAction = robot.choiceAction(sim.get_time(), "evolve")
+      sim.set_action('robot', curAction)
+      sim.step()
+      curScore = experiment.calcFitness(sim)
+      if curScore > robot.get_score() and alt==False:
+        robot.set_score(curScore) 
+      elif curScore > robot.get_altscore() and alt==True:
+        robot.set_altscore(curScore)
+
+    world.remove_object('robot')
+    alt = True
+  return robot
+
+#mutate: identical to robot.py mutate
 def mutate(old_shape, old_genes, parent_shape):
     
   count = 0
