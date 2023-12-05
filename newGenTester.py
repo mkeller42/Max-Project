@@ -16,7 +16,7 @@ import robot
 
 def robotDataRead(fileNum):
   dataList = []
-  for i in range(0, int(fileNum)+10, 50):
+  for i in range(0, int(fileNum)+10, 20):
     with open('./example_data/round' + str(i) + '/robot_data_round' + str(i) + '.json', 'r') as f:
       # print(i)
       dataList.append(json.load(f))
@@ -43,6 +43,8 @@ def findNewScores(file):
 
   rdata = file
   worldSeed = 3
+  numCores = 12
+  numSteps = 300
   # wx, wy = 7, 7
   nsteps = 300
   envos = ["flat_env.json", "hill_env.json"]
@@ -89,7 +91,7 @@ def findNewScores(file):
       newRobots.append(newRobot)
 
   # use multiprocessing to simulate robots for round
-  with mp.Pool(4) as p:
+  with mp.Pool(numCores) as p:
     ## 2. Evaluate all robots
     newRobots = p.map(robotSim, newRobots)
 
