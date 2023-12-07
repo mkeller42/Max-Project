@@ -34,7 +34,7 @@ def crossBreed(dataList):
       print("check")
       tempScores = findNewScores(d)
       filewriter.writerow([tempScores[0], tempScores[1], round])
-      round += 50
+      round += 20
 
   return
 
@@ -43,7 +43,7 @@ def findNewScores(file):
 
   rdata = file
   worldSeed = 3
-  numCores = 12
+  numCores = 4
   numSteps = 300
   # wx, wy = 7, 7
   nsteps = 300
@@ -57,7 +57,6 @@ def findNewScores(file):
 
   for y in range(16):
     for x in range(8):
-      count += 1
       localScores = []
 
       par1cords = "{},{}".format(x, y)
@@ -65,6 +64,7 @@ def findNewScores(file):
       # beware horrible hack ahead, please FIX ME.
       if rdata.get(par1cords) == None or rdata.get(par2cords) == None:
         continue
+      count += 1
       _rshape = rdata[par1cords][0]
       _rgenes = rdata[par1cords][1]
 
@@ -99,9 +99,11 @@ def findNewScores(file):
   for rob in newRobots:
     sumAScores += rob.get_score()
     sumBScores += rob.get_altscore()
-  avgAScore = sumAScores / count
-  avgBScore = sumBScores / count
-  return [avgAScore, avgBScore]
+  if (count):
+    avgAScore = sumAScores / count
+    avgBScore = sumBScores / count
+    return [avgAScore, avgBScore]
+  return [0,0]
         
 #robotSim: almost-copy of robotSim in experiment.py file
 #change: uses robot.get_worlds to get the parent worlds
@@ -125,6 +127,8 @@ def robotSim(robot):
         robot.set_score(curScore) 
       elif curScore > robot.get_altscore() and alt==True:
         robot.set_altscore(curScore)
+
+    
 
     world.remove_object('robot')
     alt = True

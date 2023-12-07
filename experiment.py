@@ -109,7 +109,10 @@ def getBestScorer(worldArray, columns, worldHeight):
         bestScorer = worldArray[j][i].getRobot()
   if bestScorer == None:
     return None
-  return [bestScorer.get_structure().tolist(), bestScorer.get_genes().tolist()]
+  return [bestScorer.get_structure().tolist(), [bestScorer.get_genes()[0].tolist(), 
+                                                bestScorer.get_genes()[1].tolist(),
+                                                bestScorer.get_genes()[2].tolist(),
+                                                bestScorer.get_genes()[3].tolist()]]
 
 #finds available robot nearby to mix genes with to create offspring
 def getParent(robot, worldArray, maxSpaces):
@@ -124,34 +127,6 @@ def getParent(robot, worldArray, maxSpaces):
 
   return parentRobot
 
-#sims the robot in the world
-def robotSim(robot):
-  worlds = worldArray[robot.get_location()[0]][robot.get_location()[1]].getEvos()
-  alt = False
-
-
-  for world in worlds:
-    robot.getWorldObj().set_pos(3, 2)
-    world.add_object(robot.getWorldObj())
-
-    sim = EvoSim(world)
-    sim.reset()
-
-    for i in range(numSteps):
-      #if want to change how actions are decided, do it here
-      curAction = robot.choiceAction(sim.get_time(), moveMethod)
-      sim.set_action('robot', curAction)
-      sim.step()
-      curScore = calcFitness(sim)
-      if curScore > robot.get_score() and alt==False:
-        robot.set_score(curScore) 
-      elif curScore > robot.get_altscore() and alt==True:
-        robot.set_altscore(curScore)
-
-    world.remove_object('robot')
-    alt = True
-  return robot
-
 def findRobLocation(x, wA, m):
   locList = findOpenSpace(x.get_location(), wA, m)
       
@@ -161,6 +136,55 @@ def findRobLocation(x, wA, m):
   loc = random.choice(locList)
   x.set_location(loc)
   return x
+
+#sims the robot in the world
+def robotSim(robot):
+  worlds = worldArray[robot.get_location()[0]][robot.get_location()[1]].getEvos()
+  alt = False
+
+  for world in worlds:
+    robot.getWorldObj().set_pos(3, 2)
+    world.add_object(robot.getWorldObj())
+
+    sim = EvoSim(world)
+    sim.reset()
+
+    for i in range(numSteps):
+      #scale distance value to be of height
+      #use that when calculating sin wave stuff
+      #create genetic bitmask for all robot parts
+      #create genetic code (25 * 3) for sin wave calculation
+      #multiply genetic code, bitmask, and sensor value together in sin wave function
+      robot.setBottomSensor(calcBottomSensor(sim, robot))
+
+      #if want to change how actions are decided, do it here
+      curAction = robot.choiceAction(sim.get_time(), moveMethod)
+      sim.set_action('robot', curAction)
+      sim.step()
+
+      
+
+    #calculate scores
+    curScore = calcFitness(sim)
+    if curScore > robot.get_score() and alt==False:
+      robot.set_score(curScore) 
+    elif curScore > robot.get_altscore() and alt==True:
+      robot.set_altscore(curScore)
+
+    world.remove_object('robot')
+    alt = True
+  return robot
+
+#calculates the distance from the center of mass of the robot to the nearest ground point 
+def calcBottomSensor(sim, robot):
+  distance = 100
+  robotCenterCords = robot.getCenterMass(sim)
+  groundCords = sim.object_pos_at_time(sim.get_time(), 'ground')
+  for i in range(len(groundCords[0])):
+    if (round(robotCenterCords[0]) == round(groundCords[0][i])):
+      distance = robotCenterCords[1] - groundCords[1][i]
+      break # i don't think it's possible to get a lower coord before a higher one using the built-in system, so you don't have to check 
+  return distance
 
 
 if __name__ == '__main__':
@@ -211,11 +235,11 @@ if __name__ == '__main__':
       worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile, altdataFile
   write_json(worldFile, "_worlds.json", '')
   
-  #I know I am using a preset seed here, but this actually fully randomizes it.
-  #It isn't fully randomized otherwise? idk, but its currently NOT SEEDED
+  #SEEDING THE WORLD
   random.seed(robotSeed) 
 
-  s1Robot = robot.Robot(sample_robot((5,5)), globalID, None)
+  s1Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+  s1Robot.generateRandomGenes()
   s1Robot.set_location([1,1])
   s1Robot.set_true_location([1,1])
   s1Robot.parents = (-1, -1)
@@ -241,11 +265,11 @@ if __name__ == '__main__':
     for x in aliveRobots:
       #create offspring
       globalID += 1
-      newRobot = robot.Robot((x.get_structure(), x.get_connections()), globalID, x.get_score())
+      newRobot = robot.Robot((x.get_structure(), x.get_connections()), x.get_genes(), globalID, x.get_score())
       #determine if mutation occurs
       if random.random() < mutationRate:
         coParent = getParent(x, worldArray, maxRobotsPerSpace)
-        newRobot.set_structure(newRobot.mutate(x.get_structure().copy(), x.get_genes().copy(), coParent))
+        newRobot.mutate(coParent)
         if coParent == None:
           newRobot.set_parIDs([x.get_id(), None])
         else:
@@ -264,6 +288,8 @@ if __name__ == '__main__':
       newRobots = p.map(partial(findRobLocation, wA=worldArray, m=maxRobotsPerSpace), newRobots)
       ## 2. Evaluate all robots
       newRobots = p.map(robotSim, newRobots)
+    
+
     
 
     ## 3. Check for replacements
@@ -307,7 +333,10 @@ if __name__ == '__main__':
         "bestScoreWorld": worldData(worldArray, worldHeight),
         "topScore": aliveRobots[0].get_score(),
         "topRobot": aliveRobots[0].get_structure().tolist(),
-        "topGenes": aliveRobots[0].get_genes().tolist(),
+        "topGenes": [aliveRobots[0].get_genes()[0].tolist(), 
+                     aliveRobots[0].get_genes()[1].tolist(),
+                     aliveRobots[0].get_genes()[2].tolist(),
+                     aliveRobots[0].get_genes()[3].tolist()],
         "topRobotLocation": aliveRobots[0].get_true_location(),
         "env_1_BestScorer": getBestScorer(worldArray, env_1_list, worldHeight),
         "env_2_BestScorer": getBestScorer(worldArray, env_2_list, worldHeight),
@@ -320,7 +349,10 @@ if __name__ == '__main__':
       robotDict = {}
       for x in aliveRobots:
         robotDict[str(x.get_true_location()[0]) + "," + str(x.get_true_location()[1])] = [x.get_structure().tolist(), 
-                                                                                          x.get_genes().tolist(),
+                                                                                          [x.get_genes()[0].tolist(), 
+                                                                                            x.get_genes()[1].tolist(),
+                                                                                            x.get_genes()[2].tolist(),
+                                                                                            x.get_genes()[3].tolist()],
                                                                                           x.get_id(),
                                                                                           x.get_parIDs(),
                                                                                           [x.get_score(),
