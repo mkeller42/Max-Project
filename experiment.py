@@ -3,6 +3,7 @@ from evogym import WorldObject, EvoWorld, EvoSim, EvoViewer, sample_robot, get_f
 import os, sys, time, random
 import numpy as np
 from functools import partial
+from array import array
 
 import gym
 import evogym.envs
@@ -194,8 +195,8 @@ if __name__ == '__main__':
 
   globalID = 1 #ID variable for keeping track of robots
   moveMethod = sys.argv[1]
-  
-  
+
+
   worldWidth = 16 #seeds for generating each individual world randomly (used together) 
   worldHeight = 16 #maximum size of 99x99!
   worldSeed = 3 #seed for generating each entire collection of worlds randomly
@@ -219,37 +220,77 @@ if __name__ == '__main__':
   env_2_list = [8,9,10,11,12,13,14,15]
   total_env_list = [[env_1_list], [env_2_list]]
 
-  #generate random worlds and add them to array worldArray
-  worldFile = {}
-  for i in range(worldHeight):
-    worldArray.append([])
-    for j in range(worldWidth):
-      if j in env_1_list:
-        evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
-        altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
-      elif j in env_2_list:
-        evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
-        altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
-      world = environment.World(evo, altevo, j, i)
-      worldArray[i].append(world)
-      worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile, altdataFile
-  write_json(worldFile, "_worlds.json", '')
-  
-  #SEEDING THE WORLD
-  random.seed(robotSeed) 
+  #RESUMING A SIM INSTRUCTIONS
+  #Take "_worlds.json" and whatever robot_data json file you need and put into resume_data folder
+  #Rename robot_data file to "robot_data.json"
+  #Run program with extra argument "resume"
+  #Voila
+  if len(sys.argv) == 3:
+    if sys.argv[2] == "resume":
+      #create previous worlds using _worlds.json
+      for i in range(worldHeight):
+        worldArray.append([])
+        for j in range(worldWidth):
+          with open('./resume_data/_worlds.json', 'r') as f:
+            worldInfo = json.load(f)
+            # print(worldInfo["World [0,0]"])
+          normWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
+          altWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
 
-  s1Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
-  s1Robot.generateRandomGenes()
-  s1Robot.set_location([1,1])
-  s1Robot.set_true_location([1,1])
-  s1Robot.parents = (-1, -1)
-  curSim = robotSim(s1Robot)
-  worldArray[1][1].setRobot(s1Robot)
+          with open('temp_world.json', 'w') as outfile:
+            json.dump(normWorld, outfile)
+          norm = EvoWorld.from_json(os.path.join('temp_world.json'))
+          with open('temp_world.json', 'w') as outfile:
+            json.dump(altWorld, outfile)
+          alt = EvoWorld.from_json(os.path.join('temp_world.json'))
 
-  aliveRobots.append(s1Robot)
+          world = environment.World(norm, alt, j, i)
+          worldArray[i].append(world)
+
+          #add robots to each world using robot_data.json
+          with open("./resume_data/robot_data.json", 'r') as f:
+            robotInfo = json.load(f)
+          if str(j) + "," + str(i) in robotInfo:
+            rob = robotInfo[str(j) + "," + str(i)]
+            newRob = robot.Robot((np.array(rob[0]), get_full_connectivity(np.array(rob[0]))), np.array(rob[1]), rob[2], None)
+            newRob.set_location([i,j])
+            newRob.set_true_location([j,i])
+            newRob.parentsIDS = rob[3]
+            world.setRobot(newRob)
+            aliveRobots.append(newRob)
+
+  else:
+    #generate random worlds and add them to array worldArray
+    worldFile = {}
+    for i in range(worldHeight):
+      worldArray.append([])
+      for j in range(worldWidth):
+        if j in env_1_list:
+          evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
+          altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
+        elif j in env_2_list:
+          evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
+          altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
+        world = environment.World(evo, altevo, j, i)
+        worldArray[i].append(world)
+        worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile, altdataFile
+    write_json(worldFile, "_worlds.json", '')
+    
+    #SEEDING THE WORLD
+    random.seed(robotSeed) 
+
+    s1Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+    s1Robot.generateRandomGenes()
+    s1Robot.set_location([7,7])
+    s1Robot.set_true_location([7,7])
+    s1Robot.parentsIDs = (-1, -1)
+    curSim = robotSim(s1Robot)
+    worldArray[1][1].setRobot(s1Robot)
+
+    aliveRobots.append(s1Robot)
   
   
-  
+  #START SIM
   for t in range(simRunTime):
     starttime = time.time()
     failureRates = []

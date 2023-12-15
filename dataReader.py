@@ -2,11 +2,13 @@ import json, sys
 import networkx as nx
 import matplotlib.pyplot as plt
 import csv
+import bisect
 
 ##important info for this file
 # when calling in terminal, need one argument.
-# argument = round # you want to examine(will examine all rounds before as well for some functions)
+# argument = round # you want to examine(will examine all rounds before as well for many functions)
 
+#returns array of datafiles containing world_data to be used
 def worldDataRead(fileNum):
   dataList = []
   for i in range(0, int(fileNum)+10, 10):
@@ -15,6 +17,7 @@ def worldDataRead(fileNum):
       dataList.append(json.load(f))
   return dataList
 
+#returns array of datafiles containing robot_data to be used
 def robotDataRead(fileNum):
   dataList = []
   for i in range(0, int(fileNum)+10, 10):
@@ -134,10 +137,10 @@ def compareScores(dataList):
         BCount += 1
         BStdTotal += d[rob][4][0]
         BAltTotal += d[rob][4][1]
-    AStdTotal = AStdTotal / ACount
-    AAltTotal = AAltTotal / ACount
-    BStdTotal = BStdTotal / ACount
-    BAltTotal = BAltTotal / ACount
+    AStdTotal = round(AStdTotal / ACount, 2)
+    AAltTotal = round(AAltTotal / ACount, 2)
+    BStdTotal = round(BStdTotal / ACount, 2)
+    BAltTotal = round(BAltTotal / ACount, 2)
     avgsPerRound.append([AStdTotal, AAltTotal, BStdTotal, BAltTotal])
 
   with open('data.csv', 'w') as csvfile:
@@ -147,6 +150,58 @@ def compareScores(dataList):
     for round in avgsPerRound:
       filewriter.writerow([round[0], round[1], round[2], round[3]])
 
+#TEST ON NEW DATA (FROM CLAUS)
+#percentiles calculates percentiles of fitness for each group of robots for every 10th round for each group (a/b)
+#writes it to the file dataPercentiles.csv
+def percentiles(dataList):
+  AGroup = ['0,', '1,', '2,', '3,', '4,', '5,', '6,', '7,']
+
+  totalPercentilesA = []
+  totalPercentilesB = []
+  #loop through each dataFile
+  for d in dataList:
+    aScoreList = []
+    bScoreList = []
+    #create sorted list of robot scores for each envo
+    for rob in d:
+      if (rob[0:2] in AGroup):
+        bisect.insort(aScoreList, d[rob][4][0])
+      else:
+        bisect.insort(bScoreList, d[rob][4][0])
+    
+    #determine number of robots and each 10th percetile value
+    aLength = len(aScoreList)
+    bLength = len(bScoreList)
+    if (bLength < 128):
+      totalPercentilesA.append([None,None,None,None,None,None,None,None,None,None,None])
+      totalPercentilesB.append([None,None,None,None,None,None,None,None,None,None,None])
+      continue
+    percentileJumpA = float(aLength/10)
+    percentileJumpB = float(bLength/10)
+    APercentileScores = []
+    BPercentileScores = []
+
+    #use sorted score array to find 10th percetile scores for entire robot population
+    for i in range(0,10):
+      APercentileScores.append(round(aScoreList[round(i*percentileJumpA)], 2))
+      BPercentileScores.append(round(bScoreList[round(i*percentileJumpB)], 2))
+    APercentileScores.append(round(aScoreList[len(aScoreList)-1], 2))
+    BPercentileScores.append(round(bScoreList[len(bScoreList)-1], 2))
+    totalPercentilesA.append(APercentileScores)
+    totalPercentilesB.append(BPercentileScores)
+
+  #after all data collected, add to csv "dataPercentiles.csv"
+  with open('dataPercentiles.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    filewriter.writerow(['A0', 'A10', 'A20', 'A30', 'A40', 'A50', 'A60', 'A70', 'A80', 'A90', 'A100', 
+                         'B0', 'B10', 'B20', 'B30', 'B40', 'B50', 'B60', 'B70', 'B80', 'B90', 'B100', 'round'])
+    for i in range(len(totalPercentilesA)):
+      filewriter.writerow([totalPercentilesA[i][0], totalPercentilesA[i][1], totalPercentilesA[i][2], totalPercentilesA[i][3], totalPercentilesA[i][4], totalPercentilesA[i][5], 
+                           totalPercentilesA[i][6], totalPercentilesA[i][7], totalPercentilesA[i][8], totalPercentilesA[i][9], totalPercentilesA[i][10], 
+                           totalPercentilesB[i][0], totalPercentilesB[i][1], totalPercentilesB[i][2], totalPercentilesB[i][3], totalPercentilesB[i][4], totalPercentilesB[i][5], 
+                           totalPercentilesB[i][6], totalPercentilesB[i][7], totalPercentilesB[i][8], totalPercentilesB[i][9], totalPercentilesB[i][10],
+                           i*10])
 
 
 if __name__ == "__main__":
@@ -164,8 +219,9 @@ if __name__ == "__main__":
   # avgScoreDiffs = getAvgScoreDiff(worldDataList, fileNum)
   # print(avgScoreDiffs)
 
-  avgsPerRound = compareScores(robotDataList)  ## format = [AStandardScore, AAltScore, BStandardScore, BAltScore]
-  print(avgsPerRound)
+  # avgsPerRound = compareScores(robotDataList)  ## format = [AStandardScore, AAltScore, BStandardScore, BAltScore]
+  # print(avgsPerRound)
+  percentiles(robotDataList)
 
   # ancestryTree = getAncestryGraph(robotDataList, 222865)
 

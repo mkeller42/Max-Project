@@ -76,7 +76,7 @@ def findNewScores(file):
 
       #create new offspring from A and B parent
       shape = mutate(shape, genes, shape2)
-      newRobot = robot.Robot(sample_robot((5,5)), 1, -100)
+      newRobot = robot.Robot(sample_robot((5,5)), 1, -100)  ##ERROR: I have not implemented the new robot code because I added genes, FIXME
       newRobot.set_structure(shape)
 
       #set rob worlds to parents' worlds

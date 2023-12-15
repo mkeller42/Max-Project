@@ -116,7 +116,11 @@ class Robot():
     self.timeGenes = tG
     self.sensorGenes = sG
 
+  def getWorldObj(self, ):
+    return self.worldObject
 
+  #createWorldObj function
+  # creates/returns robot EvoGym WorldObject() for use in sim
   def createWorldObj(self, ):
     robObject = WorldObject()
     robObject.load_from_array(
@@ -124,17 +128,20 @@ class Robot():
       structure = self.structure,
       connections = self.connections)
     return robObject
-    
-  def getWorldObj(self, ):
-    return self.worldObject
   
+  #getCenterMass function
+  # takes robot(self) and EvoGym sim (sim)
+  # returns the coordinates for the calculated center of mass of the robot 
+  # determined by average voxel positions
   def getCenterMass(self, sim):
     masses = sim.object_pos_at_time(sim.get_time(), 'robot')
     xavg = sum(masses[0])
     yavg = sum(masses[1])
     return [xavg/len(masses[0]), yavg/len(masses[1])]
   
-  #scaling and setting bottom sensor value
+  #setBottomSensor function
+  # sets self.bottomSensor to the distance from the center Robot mass to the ground beneath it
+  # bottomSensor = (distance-5)/5 to scale to robot height
   def setBottomSensor(self, distance):
     if (distance > 5):
       distance -= 5
@@ -143,9 +150,12 @@ class Robot():
     distance /= 5
     self.bottomSensor = distance
 
+  #returns bottomSensor value
   def getBottomSensor(self, ):
     return self.bottomSensor
 
+  #count_actuators functin
+  # returns int of number of actuators in robot
   def count_actuators(self):
     count = 0
     for _x in self.get_structure().flatten():
@@ -153,15 +163,21 @@ class Robot():
         count += 1
     return count
 
+  #choiceAction function
+  # determines which action function (evolvedAction, action, randomAction) to use for sim
   def choiceAction(self, steps, action):
     if action == "evolve":
       return self.evolvedAction(steps)
     elif action == "random":
       return self.randomAction()
     elif action == "oscillate":
-      return self.action(steps)
+      return self.standardAction(steps)
     return ValueError
 
+  #evolvedAction function
+  # takes int steps argument (functions as sime time)
+  # returns array of gene-determined actions to be used as actuator values in action determination
+  # (12/12/23) equation used uses bitmask, amp, time, sensor and sin wave 
   def evolvedAction(self, steps):
     sensor = self.getBottomSensor()
     action = []
@@ -174,27 +190,41 @@ class Robot():
           action.append(np.sin(sensorValue + (steps * timeValue)) * ampValue)  #I CHANGED IT SO THAT IT WASN'T * 0.1
     return np.array(action)
   
-  def action(self, steps):
+  #action function
+  # takes int steps argument (functions as sim time)
+  # returns array of sin-determined actions to be used as actuator values in action determination
+  # REMOVES ABILITY FOR ROBOTS TO EVOLVE THEIR ACTIONS THROUGH GENES
+  # (12/12/23) only used if program run with "oscillate" tag 
+  def standardAction(self, steps):
     action = []
     for _ in range(self.count_actuators()):
       action.append(np.sin(steps/3 + (_*0.1))+1)
     return np.array(action)
   
+  #randomAction function
+  # returns array of random numbers to be used as actuator values in action determination
+  # (12/12/23) only used if program is run with "random" tag (never been used)
   def randomAction(self):
     action = []
     for _ in range(self.count_actuators()):
       action.append(random.uniform(0.6, 1.6))
     return np.array(action)
-  
+
+  #valid function
+  # takes new robot structure(shape)
+  # returns True if shape is valid (no islands of voxels)
   def valid(self, shape):
     return (is_connected(shape) and
         (3 in shape or 4 in shape))
   
+  #mutate function 
+  # takes a clone of a robot(self) and a parent robot(parent)
+  # modifies self to include structure and gene data from both self and parent
+  # then mutates by changing one data point in either strucutre or genes randomly
   def mutate(self, parent):
-  
     count = 0
     while count <= 5000:
-
+      #create new set of data to modify
       new_shape = self.get_structure().copy()
       new_ampGenes = self.get_ampGenes().copy()
       new_timeGenes = self.get_timeGenes().copy()
@@ -205,36 +235,34 @@ class Robot():
       if parent != None:
         parent_shape = parent.get_structure()
         if random.random() > 0.5:
-          for i in range(2, 5):
-            new_shape[i] = parent_shape[i]
-            new_ampGenes[i] = parent.get_ampGenes()[i]
-            new_timeGenes[i] = parent.get_timeGenes()[i]
-            new_sensorGenes[i] = parent.get_sensorGenes()[i]
-            new_bitmask[i] = parent.get_bitmask()[i]
+          rows = [2,3,4]
         else:
-          for i in range(3, 5):
-            new_shape[i] = parent_shape[i]
-            new_ampGenes[i] = parent.get_ampGenes()[i]
-            new_timeGenes[i] = parent.get_timeGenes()[i]
-            new_sensorGenes[i] = parent.get_sensorGenes()[i]
-            new_bitmask[i] = parent.get_bitmask()[i]
+          rows = [3,4]
+        for i in rows:
+          new_shape[i] = parent_shape[i]
+          new_ampGenes[i] = parent.get_ampGenes()[i]
+          new_timeGenes[i] = parent.get_timeGenes()[i]
+          new_sensorGenes[i] = parent.get_sensorGenes()[i]
+          new_bitmask[i] = parent.get_bitmask()[i]
 
-      #make mutation to body or genes
+      #make MUTATION to body or genes
       pos = tuple(np.random.randint(0,4,2))
       if random.random() > 0.5:
         new_shape[pos] = np.random.randint(0,4)
       else:
         #choose which gene to update
-        whichGene = random.random() * 4  ##FIX ME
+        whichGene = random.random() * 4 
+        rng  = np.random.default_rng()
         if (whichGene > 3):
           new_bitmask[pos] = abs(new_bitmask[pos]-1)
         elif (whichGene > 2):
-          new_ampGenes[pos] += round((random.random()-0.5) * 2, 2)
+          new_ampGenes[pos] += round(rng.normal(), 2)
         elif (whichGene > 1):
-          new_timeGenes[pos] += round((random.random()-0.5) * 2, 2)
+          new_timeGenes[pos] += round(rng.normal(), 2)
         else:
-          new_sensorGenes[pos] += round((random.random()-0.5) * 2, 2)
+          new_sensorGenes[pos] += round(rng.normal(), 2)
 
+      #check if mutation/crossbreeding resulted in functional structure
       if self.valid(new_shape):
         self.set_structure(new_shape)
         self.set_genes(new_bitmask, new_ampGenes, new_timeGenes, new_sensorGenes)
@@ -244,13 +272,20 @@ class Robot():
     if count > 5000:
       raise Exception("Can't find a valid mutation after 5000 tries!")
 
-  
+  #generateRandomGenes function
+  # takes an unused robot(self)
+  # creates bitmask, sensor, time, and amp gene arrays
+  # randomizes contents of these gene arrays and sets them to the defaults of self
+  # (12/12/23) only used when creating robot from scratch, i.e. very beginning of sim
   def generateRandomGenes(self, ):
+    #create gene arrays (same sizes as structure)
     sample = self.get_structure().copy()
     tempBitmask = sample.copy()
     tempSensorGenes = sample.copy()
     tempTimeGenes = sample.copy()
     tempAmpGenes = sample.copy()
+
+    #loop through arrays and set data to random number [-6.28, 6.28]
     for i in range(len(tempBitmask)):
       for j in range(len(tempBitmask[i])):
         tempBitmask[i][j] = round(random.random())
