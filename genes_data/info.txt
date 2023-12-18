@@ -1,0 +1,3 @@
+Experiment finsihed 12/17/23
+Experiment ran to determine usability/effectiveness of newly implemented genetic code (ampGenes, sensorGenes, timeGenes)
+Experiment stopped automatically when reached 3000 round limit

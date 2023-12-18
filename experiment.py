@@ -3,7 +3,6 @@ from evogym import WorldObject, EvoWorld, EvoSim, EvoViewer, sample_robot, get_f
 import os, sys, time, random
 import numpy as np
 from functools import partial
-from array import array
 
 import gym
 import evogym.envs
@@ -208,6 +207,7 @@ if __name__ == '__main__':
   simRunTime = 3000 #number of rounds the sim will run
   numCores = 12 #number of multiprocessing units will run
   numSteps = 300
+  extraRounds = 0 #used for added extra rounds when resuming sim
 
   worldArray = []
   curDead = []
@@ -226,38 +226,39 @@ if __name__ == '__main__':
   #Run program with extra argument "resume"
   #Voila
   if len(sys.argv) == 3:
-    if sys.argv[2] == "resume":
-      #create previous worlds using _worlds.json
-      for i in range(worldHeight):
-        worldArray.append([])
-        for j in range(worldWidth):
-          with open('./resume_data/_worlds.json', 'r') as f:
-            worldInfo = json.load(f)
-            # print(worldInfo["World [0,0]"])
-          normWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
-          altWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
+    #create previous worlds using _worlds.json
+    print("Resuming Sim from Round "+ sys.argv[2])
+    extraRounds = int(sys.argv[2])
+    for i in range(worldHeight):
+      worldArray.append([])
+      for j in range(worldWidth):
+        with open('./resume_data/_worlds.json', 'r') as f:
+          worldInfo = json.load(f)
+          # print(worldInfo["World [0,0]"])
+        normWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
+        altWorld = worldInfo["World [" + str(j) + "," + str(i) + "]"][0]
 
-          with open('temp_world.json', 'w') as outfile:
-            json.dump(normWorld, outfile)
-          norm = EvoWorld.from_json(os.path.join('temp_world.json'))
-          with open('temp_world.json', 'w') as outfile:
-            json.dump(altWorld, outfile)
-          alt = EvoWorld.from_json(os.path.join('temp_world.json'))
+        with open('temp_world.json', 'w') as outfile:
+          json.dump(normWorld, outfile)
+        norm = EvoWorld.from_json(os.path.join('temp_world.json'))
+        with open('temp_world.json', 'w') as outfile:
+          json.dump(altWorld, outfile)
+        alt = EvoWorld.from_json(os.path.join('temp_world.json'))
 
-          world = environment.World(norm, alt, j, i)
-          worldArray[i].append(world)
+        world = environment.World(norm, alt, j, i)
+        worldArray[i].append(world)
 
-          #add robots to each world using robot_data.json
-          with open("./resume_data/robot_data.json", 'r') as f:
-            robotInfo = json.load(f)
-          if str(j) + "," + str(i) in robotInfo:
-            rob = robotInfo[str(j) + "," + str(i)]
-            newRob = robot.Robot((np.array(rob[0]), get_full_connectivity(np.array(rob[0]))), np.array(rob[1]), rob[2], None)
-            newRob.set_location([i,j])
-            newRob.set_true_location([j,i])
-            newRob.parentsIDS = rob[3]
-            world.setRobot(newRob)
-            aliveRobots.append(newRob)
+        #add robots to each world using robot_data.json
+        with open("./resume_data/robot_data.json", 'r') as f:
+          robotInfo = json.load(f)
+        if str(j) + "," + str(i) in robotInfo:
+          rob = robotInfo[str(j) + "," + str(i)]
+          newRob = robot.Robot((np.array(rob[0]), get_full_connectivity(np.array(rob[0]))), np.array(rob[1]), rob[2], None)
+          newRob.set_location([i,j])
+          newRob.set_true_location([j,i])
+          newRob.parentsIDS = rob[3]
+          world.setRobot(newRob)
+          aliveRobots.append(newRob)
 
   else:
     #generate random worlds and add them to array worldArray
@@ -364,11 +365,11 @@ if __name__ == '__main__':
 
     #create save file of world state
     if t%10 == 0:
-      roundfolder = 'round' + str(t)
+      roundfolder = 'round' + str(t + extraRounds)
       if not os.path.exists('./saved_data/'+roundfolder):
         os.mkdir('./saved_data/'+roundfolder)
       infoDict = {
-        "round": t,
+        "round": (t + extraRounds),
         "totalRobots": len(aliveRobots),
         "totalDeadRobots": len(fossilizedRobots),
         "bestScoreWorld": worldData(worldArray, worldHeight),
@@ -385,7 +386,7 @@ if __name__ == '__main__':
         "avgNewFitness": avgNewFitness,
         "avgFitnessDiff": avgFitnessDiff
       }
-      write_json(infoDict, "world_data_round" + str(t) + ".json", roundfolder)
+      write_json(infoDict, "world_data_round" + str(t + extraRounds) + ".json", roundfolder)
 
       robotDict = {}
       for x in aliveRobots:
@@ -398,10 +399,10 @@ if __name__ == '__main__':
                                                                                           x.get_parIDs(),
                                                                                           [x.get_score(),
                                                                                           x.get_altscore()]]
-      write_json(robotDict, "robot_data_round" + str(t) + ".json", roundfolder)
+      write_json(robotDict, "robot_data_round" + str(t + extraRounds) + ".json", roundfolder)
 
       #print select data from each round to terminal
-      print ("Round: " + str(t))
+      print ("Round: " + str(t + extraRounds))
       print ("Total Runtime (s): {}".format(time.time() - starttime))
       print ("Total Robots: " + str(len(aliveRobots)))
       for i in worldData(worldArray, worldHeight):
