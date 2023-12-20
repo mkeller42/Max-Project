@@ -1,5 +1,6 @@
 import json, sys
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 import csv
 import bisect
@@ -137,7 +138,7 @@ def compareScores(dataList):
         BCount += 1
         BStdTotal += d[rob][4][0]
         BAltTotal += d[rob][4][1]
-    AStdTotal = round(AStdTotal / ACount, 2)
+    AStdTotal = round((AStdTotal / ACount), 2)
     AAltTotal = round(AAltTotal / ACount, 2)
     BStdTotal = round(BStdTotal / ACount, 2)
     BAltTotal = round(BAltTotal / ACount, 2)
@@ -147,8 +148,8 @@ def compareScores(dataList):
     filewriter = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
     filewriter.writerow(['AStd', 'AAlt', 'BStd', 'BAlt'])
-    for round in avgsPerRound:
-      filewriter.writerow([round[0], round[1], round[2], round[3]])
+    for r in avgsPerRound:
+      filewriter.writerow([r[0], r[1], r[2], r[3]])
 
 #TEST ON NEW DATA (FROM CLAUS)
 #percentiles calculates percentiles of fitness for each group of robots for every 10th round for each group (a/b)
@@ -219,9 +220,10 @@ if __name__ == "__main__":
   # avgScoreDiffs = getAvgScoreDiff(worldDataList, fileNum)
   # print(avgScoreDiffs)
 
-  # avgsPerRound = compareScores(robotDataList)  ## format = [AStandardScore, AAltScore, BStandardScore, BAltScore]
+  avgsPerRound = compareScores(robotDataList)  ## format = [AStandardScore, AAltScore, BStandardScore, BAltScore]
   # print(avgsPerRound)
-  percentiles(robotDataList)
+
+  # percentiles(robotDataList)
 
   # ancestryTree = getAncestryGraph(robotDataList, 222865)
 

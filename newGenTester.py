@@ -16,7 +16,7 @@ import robot
 
 def robotDataRead(fileNum):
   dataList = []
-  for i in range(0, int(fileNum)+10, 20):
+  for i in range(0, int(fileNum)+10, 10):
     with open('./example_data/round' + str(i) + '/robot_data_round' + str(i) + '.json', 'r') as f:
       # print(i)
       dataList.append(json.load(f))
@@ -29,12 +29,12 @@ def crossBreed(dataList):
   with open('crossbredRobotData.csv', 'w') as csvfile:
     filewriter = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    filewriter.writerow(['flatEnv', 'hillEnv', 'round'])
+    filewriter.writerow(['AB-flat', 'AB-hill', 'AA-flat', 'AA-hill', 'BB-hill', 'BB-flat', 'round'])
     for d in dataList:
       print("check")
       tempScores = findNewScores(d)
-      filewriter.writerow([tempScores[0], tempScores[1], round])
-      round += 20
+      filewriter.writerow([tempScores[0], tempScores[1], tempScores[2], tempScores[3], tempScores[4], tempScores[5], round])
+      round += 10
 
   return
 
@@ -43,21 +43,28 @@ def findNewScores(file):
 
   rdata = file
   worldSeed = 3
-  numCores = 4
+  numCores = 8
   numSteps = 300
   # wx, wy = 7, 7
   nsteps = 300
   envos = ["flat_env.json", "hill_env.json"]
 
   count = 0
+  countA = 0
+  countB = 0
   sumAScores = 0
   sumBScores = 0
+  sumAScoresA = 0
+  sumAScoresB = 0
+  sumBScoresA = 0
+  sumBScoresB = 0
   # Load the robot and the world
   newRobots = []
+  newRobotsA = []
+  newRobotsB = []
 
   for y in range(16):
     for x in range(8):
-      localScores = []
 
       par1cords = "{},{}".format(x, y)
       par2cords = "{},{}".format(x+8, y)
@@ -76,7 +83,8 @@ def findNewScores(file):
 
       #create new offspring from A and B parent
       shape = mutate(shape, genes, shape2)
-      newRobot = robot.Robot(sample_robot((5,5)), 1, -100)  ##ERROR: I have not implemented the new robot code because I added genes, FIXME
+      newRobot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], 1, -100)  ##ERROR: I have not implemented the new robot code because I added genes, FIXME
+      newRobot.set_genes(genes[0], genes[1], genes[2], genes[3])
       newRobot.set_structure(shape)
 
       #set rob worlds to parents' worlds
@@ -89,21 +97,85 @@ def findNewScores(file):
         worlds.append(world)
         newRobot.set_worlds(worlds)
       newRobots.append(newRobot)
+  
+  for y in range(16):
+    for x in range(4):
+      par1cordsA = "{},{}".format(x, y)
+      par2cordsA = "{},{}".format(x+4, y)
+      par1cordsB = "{},{}".format(x+8, y)
+      par2cordsB = "{},{}".format(x+12, y)
+      # beware horrible hack ahead, please FIX ME.
+      if rdata.get(par1cordsA) == None or rdata.get(par2cordsA) == None or rdata.get(par1cordsB) == None or rdata.get(par2cordsB) == None:
+        continue
+      countA += 1
+      countB += 1
+      _rshapeA = rdata[par1cordsA][0]
+      _rgenesA = rdata[par1cordsA][1]
+      _rshapeB = rdata[par1cordsB][0]
+      _rgenesB = rdata[par1cordsB][1]
+
+      _r2shapeA = rdata[par2cordsA][0]
+      _r2shapeB = rdata[par2cordsB][0]
+      shape2A = np.array(_r2shapeA)
+      shape2B = np.array(_r2shapeB)
+
+      shapeA = np.array(_rshapeA)
+      genesA = np.array(_rgenesA)
+      shapeB = np.array(_rshapeB)
+      genesB = np.array(_rgenesB)
+
+      #create new offspring from A and B parent
+      shapeA = mutate(shapeA, genesA, shape2A)
+      newRobotA = robot.Robot(sample_robot((5,5)), [[],[],[],[]], 1, -100)  ##ERROR: I have not implemented the new robot code because I added genes, FIXME
+      newRobotA.set_genes(genesA[0], genesA[1], genesA[2], genesA[3])
+      newRobotA.set_structure(shapeA)
+
+      shapeB = mutate(shapeB, genesB, shape2B)
+      newRobotB = robot.Robot(sample_robot((5,5)), [[],[],[],[]], 1, -100)  ##ERROR: I have not implemented the new robot code because I added genes, FIXME
+      newRobotB.set_genes(genesB[0], genesB[1], genesB[2], genesB[3])
+      newRobotB.set_structure(shapeB)
+
+      #set rob worlds to parents' worlds
+      # worlds = []
+        
+      worldA, _ = randomWorldGen.randomizer(os.path.join('world_data',
+                                                          envos[0]),
+                                              x, y, worldSeed)  
+      worldB, _ = randomWorldGen.randomizer(os.path.join('world_data',
+                                                          envos[1]),
+                                              x, y, worldSeed) 
+      newRobotA.set_worlds([worldA, worldB])
+      newRobotsA.append(newRobotA)
+      newRobotB.set_worlds([worldB, worldA])
+      newRobotsB.append(newRobotB)
 
   # use multiprocessing to simulate robots for round
   with mp.Pool(numCores) as p:
     ## 2. Evaluate all robots
     newRobots = p.map(robotSim, newRobots)
+    newRobotsA = p.map(robotSim, newRobotsA)
+    newRobotsB = p.map(robotSim, newRobotsB)
 
   # collect rob scores for round
   for rob in newRobots:
     sumAScores += rob.get_score()
     sumBScores += rob.get_altscore()
-  if (count):
-    avgAScore = sumAScores / count
-    avgBScore = sumBScores / count
-    return [avgAScore, avgBScore]
-  return [0,0]
+  for rob in newRobotsA:
+    sumAScoresA += rob.get_score()
+    sumAScoresB += rob.get_altscore()
+  for rob in newRobotsB:
+    sumBScoresB += rob.get_score()
+    sumBScoresA += rob.get_altscore()
+
+  if (count) and (countA) and (countB):
+    avgAScore = round(sumAScores / count, 2)
+    avgBScore = round(sumBScores / count, 2)
+    avgAScoreA = round(sumAScoresA / countA, 2)
+    avgBScoreB = round(sumBScoresB / countB, 2)
+    avgAScoreB = round(sumAScoresB / countA, 2)
+    avgBScoreA = round(sumBScoresA / countB, 2)
+    return [avgAScore, avgBScore, avgAScoreA, avgAScoreB, avgBScoreB, avgBScoreA]
+  return[0,0,0,0,0,0]
         
 #robotSim: almost-copy of robotSim in experiment.py file
 #change: uses robot.get_worlds to get the parent worlds
@@ -119,14 +191,16 @@ def robotSim(robot):
 
     for i in range(300):
       #if want to change how actions are decided, do it here
+      robot.setBottomSensor(experiment.calcBottomSensor(sim, robot))
       curAction = robot.choiceAction(sim.get_time(), "evolve")
       sim.set_action('robot', curAction)
       sim.step()
-      curScore = experiment.calcFitness(sim)
-      if curScore > robot.get_score() and alt==False:
-        robot.set_score(curScore) 
-      elif curScore > robot.get_altscore() and alt==True:
-        robot.set_altscore(curScore)
+
+    curScore = experiment.calcFitness(sim)
+    if curScore > robot.get_score() and alt==False:
+      robot.set_score(curScore) 
+    elif curScore > robot.get_altscore() and alt==True:
+      robot.set_altscore(curScore)
 
     
 

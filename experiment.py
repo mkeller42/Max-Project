@@ -31,11 +31,11 @@ def scoreChecker(e):
 def findOpenSpace(worldLocation, worldArray, maxSpaces):
   possibleSpaces = []
   finalSpaces = []
-  ix = worldLocation[0]
-  iy = worldLocation[1]
-  possibleSpaces.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
+  ix = worldLocation[1]
+  iy = worldLocation[0]
+  possibleSpaces.extend([[iy, ix+1], [iy, ix-1], [iy+1, ix], [iy-1, ix]])
   for j in possibleSpaces:
-    if (0<=j[0]<worldWidth)and(0<=j[1]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() < maxSpaces):
+    if ((j[1] in env_1_list) or (j[1] in env_2_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() < maxSpaces):
       finalSpaces.append(j)
   return finalSpaces
 
@@ -43,12 +43,13 @@ def findOpenSpace(worldLocation, worldArray, maxSpaces):
 def findOccupiedSpace(worldLocation, worldArray, maxSpaces):
   possibleSpaces = []
   finalSpaces = []
-  ix = worldLocation[0]
-  iy = worldLocation[1]
-  possibleSpaces.extend([[ix+1, iy], [ix-1, iy], [ix, iy+1], [ix, iy-1]])
+  ix = worldLocation[1]
+  iy = worldLocation[0]
+  possibleSpaces.extend([[iy, ix+1], [iy, ix-1], [iy+1, ix], [iy-1, ix]])
   for j in possibleSpaces:
-    if (0<=j[0]<worldWidth)and(0<=j[1]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() >= maxSpaces):
+    if ((j[1] in env_1_list) or (j[1] in env_2_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() >= maxSpaces):
       finalSpaces.append(j)
+  finalSpaces.append([iy,ix])
   return finalSpaces
 
 #calculate fitness (currently average voxel x-position)
@@ -150,11 +151,6 @@ def robotSim(robot):
     sim.reset()
 
     for i in range(numSteps):
-      #scale distance value to be of height
-      #use that when calculating sin wave stuff
-      #create genetic bitmask for all robot parts
-      #create genetic code (25 * 3) for sin wave calculation
-      #multiply genetic code, bitmask, and sensor value together in sin wave function
       robot.setBottomSensor(calcBottomSensor(sim, robot))
 
       #if want to change how actions are decided, do it here
@@ -204,9 +200,9 @@ if __name__ == '__main__':
   maxRobotsPerSpace = 1 #how many robots are allowed to occupy the same space
   mutationRate = 1 #how often offspring mutate
 
-  simRunTime = 3000 #number of rounds the sim will run
+  simRunTime = 5000 #number of rounds the sim will run
   numCores = 12 #number of multiprocessing units will run
-  numSteps = 300
+  numSteps = 150 #amount of 'time' for each sim
   extraRounds = 0 #used for added extra rounds when resuming sim
 
   worldArray = []
@@ -217,7 +213,8 @@ if __name__ == '__main__':
   #lists for what COLUMNS each environment (1 or 2) should appear in
   #(will later expand to be more than columns)
   env_1_list = [0,1,2,3,4,5,6,7]
-  env_2_list = [8,9,10,11,12,13,14,15]
+  no_env_list = [8]
+  env_2_list = [9,10,11,12,13,14,15,16]
   total_env_list = [[env_1_list], [env_2_list]]
 
   #RESUMING A SIM INSTRUCTIONS
@@ -231,7 +228,7 @@ if __name__ == '__main__':
     extraRounds = int(sys.argv[2])
     for i in range(worldHeight):
       worldArray.append([])
-      for j in range(worldWidth):
+      for j in env_1_list + env_2_list:
         with open('./resume_data/_worlds.json', 'r') as f:
           worldInfo = json.load(f)
           # print(worldInfo["World [0,0]"])
@@ -246,11 +243,12 @@ if __name__ == '__main__':
         alt = EvoWorld.from_json(os.path.join('temp_world.json'))
 
         world = environment.World(norm, alt, j, i)
-        worldArray[i].append(world)
+        worldArray[i][j] = world
 
         #add robots to each world using robot_data.json
         with open("./resume_data/robot_data.json", 'r') as f:
           robotInfo = json.load(f)
+        #add robot to world if there's one already there
         if str(j) + "," + str(i) in robotInfo:
           rob = robotInfo[str(j) + "," + str(i)]
           newRob = robot.Robot((np.array(rob[0]), get_full_connectivity(np.array(rob[0]))), np.array(rob[1]), rob[2], None)
@@ -260,12 +258,13 @@ if __name__ == '__main__':
           world.setRobot(newRob)
           aliveRobots.append(newRob)
 
+  #STARTING SIM FROM SCRATCH
   else:
     #generate random worlds and add them to array worldArray
     worldFile = {}
     for i in range(worldHeight):
       worldArray.append([])
-      for j in range(worldWidth):
+      for j in range(worldWidth+1):
         if j in env_1_list:
           evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
           altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
@@ -277,18 +276,29 @@ if __name__ == '__main__':
         worldFile["World [" + str(j) + "," + str(i) + "]"] = dataFile, altdataFile
     write_json(worldFile, "_worlds.json", '')
     
-    #SEEDING THE WORLD
+    #seeding world
     random.seed(robotSeed) 
-
+    #create robot
     s1Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
     s1Robot.generateRandomGenes()
-    s1Robot.set_location([7,7])
-    s1Robot.set_true_location([7,7])
+    s1Robot.set_location([4,16])
+    s1Robot.set_true_location([16,4])
     s1Robot.parentsIDs = (-1, -1)
     curSim = robotSim(s1Robot)
     worldArray[1][1].setRobot(s1Robot)
 
+    globalID += 1
+
+    s2Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+    s2Robot.generateRandomGenes()
+    s2Robot.set_location([4,0])
+    s2Robot.set_true_location([0,4])
+    s2Robot.parentsIDs = (-1, -1)
+    curSim = robotSim(s2Robot)
+    worldArray[1][1].setRobot(s2Robot)
+
     aliveRobots.append(s1Robot)
+    aliveRobots.append(s2Robot)
   
   
   #START SIM
@@ -297,7 +307,7 @@ if __name__ == '__main__':
     failureRates = []
     avgNewFitness = []
     avgFitnessDiff = []
-    for i in range(worldWidth):
+    for i in env_1_list + env_2_list + no_env_list:
       failureRates.append([0,0])
       avgNewFitness.append(0)
       avgFitnessDiff.append(0)
@@ -320,6 +330,7 @@ if __name__ == '__main__':
         newRobot.set_structure(x.get_structure().copy())
       #adds the location as its parent's location, but doesn't put into world yet
       newRobot.set_location(x.get_location())
+      newRobot.set_true_location([x.get_location()[1], x.get_location()[0]])
       newRobots.append(newRobot)
 
 
@@ -407,7 +418,7 @@ if __name__ == '__main__':
       print ("Total Robots: " + str(len(aliveRobots)))
       for i in worldData(worldArray, worldHeight):
         x = i.copy()
-        x.insert(env_2_list[0], '|')
+        # x.insert(env_2_list[0])
         print (x)
       print ("Top Score: " + str(aliveRobots[0].get_score()))
       print ("Top Scorer Location: " + str(aliveRobots[0].get_true_location()))
