@@ -8,6 +8,8 @@ import bisect
 ##important info for this file
 # when calling in terminal, need one argument.
 # argument = round # you want to examine(will examine all rounds before as well for many functions)
+AGroup = ['0,', '1,', '2,', '3,', '4,', '5,', '6,', '7,']
+BGroup = ['8,', '9,', '10', '11', '12', '13', '14', '15']
 
 #returns array of datafiles containing world_data to be used
 def worldDataRead(fileNum):
@@ -118,9 +120,6 @@ def getAncestryGraph(dataList, robotID):
 def compareScores(dataList):
 
   avgsPerRound = []
-  AGroup = ['0,', '1,', '2,', '3,', '4,', '5,', '6,', '7,']
-  BGroup = ['8,', '9,', '10', '11', '12', '13', '14', '15']
-
   for d in dataList:
     ACount = 0
     AStdTotal = 0
@@ -155,7 +154,6 @@ def compareScores(dataList):
 #percentiles calculates percentiles of fitness for each group of robots for every 10th round for each group (a/b)
 #writes it to the file dataPercentiles.csv
 def percentiles(dataList):
-  AGroup = ['0,', '1,', '2,', '3,', '4,', '5,', '6,', '7,']
 
   totalPercentilesA = []
   totalPercentilesB = []

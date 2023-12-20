@@ -14,6 +14,8 @@ import multiprocessing as mp
 import experiment
 import robot
 
+offset = 8
+
 def robotDataRead(fileNum):
   dataList = []
   for i in range(0, int(fileNum)+10, 10):
@@ -67,8 +69,7 @@ def findNewScores(file):
     for x in range(8):
 
       par1cords = "{},{}".format(x, y)
-      par2cords = "{},{}".format(x+8, y)
-      # beware horrible hack ahead, please FIX ME.
+      par2cords = "{},{}".format(x+offset, y)
       if rdata.get(par1cords) == None or rdata.get(par2cords) == None:
         continue
       count += 1
@@ -102,9 +103,8 @@ def findNewScores(file):
     for x in range(4):
       par1cordsA = "{},{}".format(x, y)
       par2cordsA = "{},{}".format(x+4, y)
-      par1cordsB = "{},{}".format(x+8, y)
-      par2cordsB = "{},{}".format(x+12, y)
-      # beware horrible hack ahead, please FIX ME.
+      par1cordsB = "{},{}".format(x+offset, y)
+      par2cordsB = "{},{}".format(x+offset+4, y)
       if rdata.get(par1cordsA) == None or rdata.get(par2cordsA) == None or rdata.get(par1cordsB) == None or rdata.get(par2cordsB) == None:
         continue
       countA += 1

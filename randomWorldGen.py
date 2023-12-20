@@ -29,7 +29,7 @@ def randomizer(presetWorld, x, y, worldSeed):
 		# finds x-coordinates of all blocks
 		ix = i%width
 		# checks if blocks can be manipulated (wont if covered by another block OR if block is in starting era)
-		if (i+width in ground or ix < 10):
+		if (i+width in ground or ix < 10 or ix>600):
 			continue
 		# randomly adds/removes blocks from first layer
 		if random.random() < randConstant:

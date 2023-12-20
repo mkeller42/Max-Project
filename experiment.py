@@ -35,7 +35,7 @@ def findOpenSpace(worldLocation, worldArray, maxSpaces):
   iy = worldLocation[0]
   possibleSpaces.extend([[iy, ix+1], [iy, ix-1], [iy+1, ix], [iy-1, ix]])
   for j in possibleSpaces:
-    if ((j[1] in env_1_list) or (j[1] in env_2_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() < maxSpaces):
+    if ((j[1] in total_env_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() < maxSpaces):
       finalSpaces.append(j)
   return finalSpaces
 
@@ -47,7 +47,7 @@ def findOccupiedSpace(worldLocation, worldArray, maxSpaces):
   iy = worldLocation[0]
   possibleSpaces.extend([[iy, ix+1], [iy, ix-1], [iy+1, ix], [iy-1, ix]])
   for j in possibleSpaces:
-    if ((j[1] in env_1_list) or (j[1] in env_2_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() >= maxSpaces):
+    if ((j[1] in total_env_list))and(0<=j[0]<worldHeight) and (worldArray[j[0]][j[1]].getNumRobots() >= maxSpaces):
       finalSpaces.append(j)
   finalSpaces.append([iy,ix])
   return finalSpaces
@@ -192,7 +192,7 @@ if __name__ == '__main__':
   moveMethod = sys.argv[1]
 
 
-  worldWidth = 16 #seeds for generating each individual world randomly (used together) 
+  worldWidth = 26 #seeds for generating each individual world randomly (used together) 
   worldHeight = 16 #maximum size of 99x99!
   worldSeed = 3 #seed for generating each entire collection of worlds randomly
   robotSeed = 3
@@ -213,9 +213,11 @@ if __name__ == '__main__':
   #lists for what COLUMNS each environment (1 or 2) should appear in
   #(will later expand to be more than columns)
   env_1_list = [0,1,2,3,4,5,6,7]
-  no_env_list = [8]
+  no_env_list = [8, 17]
   env_2_list = [9,10,11,12,13,14,15,16]
-  total_env_list = [[env_1_list], [env_2_list]]
+  env_3_list = [18,19,20,21,22,23,24,25]
+
+  total_env_list = env_1_list + env_2_list + env_3_list
 
   #RESUMING A SIM INSTRUCTIONS
   #Take "_worlds.json" and whatever robot_data json file you need and put into resume_data folder
@@ -228,7 +230,7 @@ if __name__ == '__main__':
     extraRounds = int(sys.argv[2])
     for i in range(worldHeight):
       worldArray.append([])
-      for j in env_1_list + env_2_list:
+      for j in total_env_list:
         with open('./resume_data/_worlds.json', 'r') as f:
           worldInfo = json.load(f)
           # print(worldInfo["World [0,0]"])
@@ -264,12 +266,15 @@ if __name__ == '__main__':
     worldFile = {}
     for i in range(worldHeight):
       worldArray.append([])
-      for j in range(worldWidth+1):
+      for j in range(worldWidth):
         if j in env_1_list:
           evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
           altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
         elif j in env_2_list:
           evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'hill_env.json'), j+1, i+1, worldSeed)
+          altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
+        elif j in env_3_list:
+          evo, dataFile = randomWorldGen.randomizer(os.path.join('world_data', 'tunnel_env.json'), j+1, i+1, worldSeed)
           altevo, altdataFile = randomWorldGen.randomizer(os.path.join('world_data', 'flat_env.json'), j+1, i+1, worldSeed)
         world = environment.World(evo, altevo, j, i)
         worldArray[i].append(world)
@@ -281,11 +286,21 @@ if __name__ == '__main__':
     #create robot
     s1Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
     s1Robot.generateRandomGenes()
-    s1Robot.set_location([4,16])
-    s1Robot.set_true_location([16,4])
+    s1Robot.set_location([4,9])
+    s1Robot.set_true_location([9,4])
     s1Robot.parentsIDs = (-1, -1)
     curSim = robotSim(s1Robot)
     worldArray[1][1].setRobot(s1Robot)
+
+    globalID += 1
+
+    s3Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+    s3Robot.generateRandomGenes()
+    s3Robot.set_location([4,18])
+    s3Robot.set_true_location([18,4])
+    s3Robot.parentsIDs = (-1, -1)
+    curSim = robotSim(s3Robot)
+    worldArray[1][1].setRobot(s3Robot)
 
     globalID += 1
 
@@ -299,6 +314,7 @@ if __name__ == '__main__':
 
     aliveRobots.append(s1Robot)
     aliveRobots.append(s2Robot)
+    aliveRobots.append(s3Robot)
   
   
   #START SIM
@@ -307,7 +323,7 @@ if __name__ == '__main__':
     failureRates = []
     avgNewFitness = []
     avgFitnessDiff = []
-    for i in env_1_list + env_2_list + no_env_list:
+    for i in total_env_list + no_env_list:
       failureRates.append([0,0])
       avgNewFitness.append(0)
       avgFitnessDiff.append(0)
