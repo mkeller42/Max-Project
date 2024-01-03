@@ -22,6 +22,11 @@ import multiprocessing as mp
 ## 1: "evolve": robots will evolve gene sequences to determine movement
 ## 2: "oscillate": robots will move on a sin wave and will not evolve movement
 ## 3: "random": robots will move completely randomly
+##will also have to input the experiment type
+## 1: "norm_ex": normal experiment. two envos (flat, hill), one robot
+## 2: "iso_ex": isolated version of normal experiment. two envos, two robots, envos do not interact 
+## 3: "trip_ex": triple envo version of experiment. three envos, one robot, 
+## 4: "trip_iso_ex": isolated version of triple envo experiment. three envos, three robots, envos do not interact
 
 #finds score of given robot
 def scoreChecker(e):
@@ -210,12 +215,37 @@ if __name__ == '__main__':
   aliveRobots = []
   fossilizedRobots = []
 
+
   #lists for what COLUMNS each environment (1 or 2) should appear in
   #(will later expand to be more than columns)
-  env_1_list = [0,1,2,3,4,5,6,7]
-  no_env_list = [8, 17]
-  env_2_list = [9,10,11,12,13,14,15,16]
-  env_3_list = [18,19,20,21,22,23,24,25]
+
+  if len(sys.argv) >= 3:
+    if sys.argv[2] == 'trip_iso_ex':
+      env_1_list = [0,1,2,3,4,5,6,7]
+      no_env_list = [8, 17]
+      env_2_list = [9,10,11,12,13,14,15,16]
+      env_3_list = [18,19,20,21,22,23,24,25]
+      curr_ex = 2
+    elif sys.argv[2] == 'trip_ex':
+      env_1_list = [0,1,2,3,4,5,6,7]
+      no_env_list = []
+      env_2_list = [8,9,10,11,12,13,14,15]
+      env_3_list = [16,17,18,19,20,21,22,23]
+      curr_ex = 0
+    elif sys.argv[2] == 'iso_ex':
+      env_1_list = [0,1,2,3,4,5,6,7]
+      no_env_list = [8]
+      env_2_list = [9,10,11,12,13,14,15,16]
+      env_3_list = []
+      curr_ex = 1
+    elif sys.argv[2] == 'norm_ex':
+      env_1_list = [0,1,2,3,4,5,6,7]
+      no_env_list = []
+      env_2_list = [8,9,10,11,12,13,14,15]
+      env_3_list = []
+      curr_ex = 0
+    else:
+      print("Error: incorrect experiment type. Try again")
 
   total_env_list = env_1_list + env_2_list + env_3_list
 
@@ -224,10 +254,10 @@ if __name__ == '__main__':
   #Rename robot_data file to "robot_data.json"
   #Run program with extra argument "resume"
   #Voila
-  if len(sys.argv) == 3:
+  if len(sys.argv) == 4:
     #create previous worlds using _worlds.json
-    print("Resuming Sim from Round "+ sys.argv[2])
-    extraRounds = int(sys.argv[2])
+    print("Resuming Sim from Round "+ sys.argv[3])
+    extraRounds = int(sys.argv[3])
     for i in range(worldHeight):
       worldArray.append([])
       for j in total_env_list:
@@ -293,28 +323,31 @@ if __name__ == '__main__':
     worldArray[1][1].setRobot(s1Robot)
 
     globalID += 1
-
-    s3Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
-    s3Robot.generateRandomGenes()
-    s3Robot.set_location([4,18])
-    s3Robot.set_true_location([18,4])
-    s3Robot.parentsIDs = (-1, -1)
-    curSim = robotSim(s3Robot)
-    worldArray[1][1].setRobot(s3Robot)
-
-    globalID += 1
-
-    s2Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
-    s2Robot.generateRandomGenes()
-    s2Robot.set_location([4,0])
-    s2Robot.set_true_location([0,4])
-    s2Robot.parentsIDs = (-1, -1)
-    curSim = robotSim(s2Robot)
-    worldArray[1][1].setRobot(s2Robot)
-
     aliveRobots.append(s1Robot)
-    aliveRobots.append(s2Robot)
-    aliveRobots.append(s3Robot)
+
+    if(curr_ex == 2):
+      s3Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+      s3Robot.generateRandomGenes()
+      s3Robot.set_location([4,18])
+      s3Robot.set_true_location([18,4])
+      s3Robot.parentsIDs = (-1, -1)
+      curSim = robotSim(s3Robot)
+      worldArray[1][1].setRobot(s3Robot)
+
+      globalID += 1
+      aliveRobots.append(s3Robot)
+
+    if (curr_ex == 1) or (curr_ex == 2):
+      s2Robot = robot.Robot(sample_robot((5,5)), [[],[],[],[]], globalID, None)
+      s2Robot.generateRandomGenes()
+      s2Robot.set_location([4,0])
+      s2Robot.set_true_location([0,4])
+      s2Robot.parentsIDs = (-1, -1)
+      curSim = robotSim(s2Robot)
+      worldArray[1][1].setRobot(s2Robot)
+
+      aliveRobots.append(s2Robot)
+    
   
   
   #START SIM
